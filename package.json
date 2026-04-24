@@ -1,0 +1,71 @@
+{
+	"name": "middiefy",
+	"type": "module",
+	"version": "0.0.0",
+	"packageManager": "pnpm@10.33.0",
+	"author": "zhong666 <hi@zhong666.me>",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/aa900031/middiefy"
+	},
+	"keywords": [
+		"middleware",
+		"middify",
+		"onion"
+	],
+	"exports": {
+		".": "./src/index.ts",
+		"./package.json": "./package.json"
+	},
+	"main": "./dist/index.cjs",
+	"module": "./dist/index.js",
+	"types": "./dist/index.d.cts",
+	"typesVersions": {
+		"*": {
+			".": [
+				"./dist/index.d.mts"
+			]
+		}
+	},
+	"files": [
+		"dist"
+	],
+	"scripts": {
+		"build": "tsdown",
+		"bench": "vitest bench --run",
+		"release": "release-it",
+		"lint": "eslint .",
+		"test": "vitest run",
+		"typecheck": "tsc --noEmit"
+	},
+	"devDependencies": {
+		"@aa900031/eslint-config": "^6.0.0",
+		"@aa900031/release-it-config": "^0.1.0",
+		"@aa900031/tsdown-config": "^0.2.0",
+		"@codspeed/vitest-plugin": "^5.3.0",
+		"@tsconfig/node22": "^22.0.5",
+		"@types/node": "^22.19.10",
+		"@vitest/coverage-istanbul": "^3.2.4",
+		"eslint": "^9.39.2",
+		"release-it": "^19.2.4",
+		"tsdown": "^0.20.3",
+		"typescript": "~5.9.3",
+		"vitest": "^3.2.4"
+	},
+	"publishConfig": {
+		"exports": {
+			".": {
+				"import": {
+					"types": "./dist/index.d.ts",
+					"default": "./dist/index.js"
+				},
+				"require": {
+					"types": "./dist/index.d.cts",
+					"default": "./dist/index.cjs"
+				}
+			},
+			"./package.json": "./package.json"
+		}
+	}
+}
