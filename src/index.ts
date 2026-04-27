@@ -24,7 +24,11 @@ export function middiefy<Fn extends AnyFunction>(
 	const wrapper = (...args: Parameters<Fn>): ReturnType<Fn> => {
 		if (middleware.size === 0)
 			return fn(...args)
-		return getter()(args)
+
+		if (!dispatch)
+			dispatch = createDispatch(fn, Array.from(middleware))
+
+		return dispatch(args)
 	}
 	wrapper.add = (...middlewareFns: MiddlewareFn<Fn>[]) => {
 		let changed = false
@@ -45,10 +49,6 @@ export function middiefy<Fn extends AnyFunction>(
 	}
 
 	return wrapper
-
-	function getter(): DispatchFn<Fn> {
-		return dispatch ??= createDispatch(fn, Array.from(middleware))
-	}
 }
 
 export function onBefore<
@@ -81,7 +81,7 @@ export function onAfter<
 					},
 					(error: Err) => {
 						callback(args, error, undefined)
-						// throw error
+						throw error
 					},
 				)
 			}
@@ -106,7 +106,7 @@ export function onError<
 			if (isNativePromise(result) || isPromiseLike(result)) {
 				return result.then(undefined, (error: Err) => {
 					callback(args, error)
-					// throw error
+					throw error
 				})
 			}
 		}
@@ -140,48 +140,51 @@ function createDispatch<Fn extends AnyFunction>(
 	fn: Fn,
 	middleware: MiddlewareFn<Fn>[],
 ): DispatchFn<Fn> {
-	let dispatch: DispatchFn<Fn> = args => fn(...args)
+	const dispatchAt = (
+		index: number,
+		args: Parameters<Fn>,
+	): ReturnType<Fn> => {
+		if (index >= middleware.length)
+			return fn(...args)
 
-	for (let index = middleware.length - 1; index >= 0; index--) {
 		const current = middleware[index]
-		const downstream = dispatch
+		let nextCalled = false
+		let nextResult!: ReturnType<Fn>
+		let nextErrored = false
+		let nextError: unknown
 
-		dispatch = (args) => {
-			let nextCalled = false
-			let nextResult!: ReturnType<Fn>
-			let nextErrored = false
-			let nextError: unknown
-
-			const next: MiddlewareNextFn<Fn> = (...argsFromNext: Parameters<Fn> | []) => {
-				if (nextCalled) {
-					if (nextErrored)
-						throw nextError
-					return nextResult
-				}
-				nextCalled = true
-				try {
-					nextResult = downstream((argsFromNext.length === 0 ? args : argsFromNext) as Parameters<Fn>)
-					return nextResult
-				}
-				catch (error) {
-					nextErrored = true
-					nextError = error
-					throw error
-				}
+		const next: MiddlewareNextFn<Fn> = (...argsFromNext: Parameters<Fn> | []) => {
+			if (nextCalled) {
+				if (nextErrored)
+					throw nextError
+				return nextResult
 			}
-
-			const result = current(next)(...args)
-			if (result === undefined)
-				return next()
-			if (nextCalled && result === nextResult)
-				return result as ReturnType<Fn>
-			if (result instanceof Promise || isPromiseLike(result))
-				return result.then((resolved: any) => resolved === undefined ? next() : resolved) as ReturnType<Fn>
-			return result as ReturnType<Fn>
+			nextCalled = true
+			try {
+				nextResult = dispatchAt(
+					index + 1,
+					(argsFromNext.length === 0 ? args : argsFromNext) as Parameters<Fn>,
+				)
+				return nextResult
+			}
+			catch (error) {
+				nextErrored = true
+				nextError = error
+				throw error
+			}
 		}
+
+		const result = current(next)(...args)
+		if (result === undefined)
+			return next()
+		if (nextCalled && result === nextResult)
+			return result as ReturnType<Fn>
+		if (result instanceof Promise || isPromiseLike(result))
+			return result.then((resolved: any) => resolved === undefined ? next() : resolved) as ReturnType<Fn>
+		return result as ReturnType<Fn>
 	}
 
-	return dispatch
+	return args => dispatchAt(0, args)
 }
 
 function isPromiseLike(

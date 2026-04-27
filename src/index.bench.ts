@@ -185,3 +185,25 @@ describe('mutation-heavy pipeline', () => {
 		churn.remove(appendFirst)
 	})
 })
+
+describe('lazy short-circuit rebuild cost', () => {
+	const input = ['zhong666']
+	const direct: SyncFn = names => names.join(',')
+	const wrapped = middiefy(direct)
+	const shortCircuit: MiddlewareFn<SyncFn> = () => () => 'blocked'
+	const passthroughMiddlewares: MiddlewareFn<SyncFn>[] = [
+		next => names => next(names),
+		next => names => next(names),
+		next => names => next(names),
+		next => names => next(names),
+		next => names => next(names),
+	]
+
+	bench('rebuild and call deep short-circuit pipeline', () => {
+		wrapped.add(shortCircuit, ...passthroughMiddlewares)
+		wrapped(input)
+		wrapped.remove(shortCircuit)
+		for (const middleware of passthroughMiddlewares)
+			wrapped.remove(middleware)
+	})
+})
