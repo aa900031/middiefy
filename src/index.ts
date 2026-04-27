@@ -69,7 +69,12 @@ export function onAfter<
 		(args: Parameters<Fn>, error: Err, result: undefined): void
 		(args: Parameters<Fn>, error: undefined, result: ResolvedReturn<Fn>): void
 	},
+	options?: {
+		rethrow?: boolean
+	}
 ): MiddlewareFn<Fn> {
+	const rethrow = options?.rethrow ?? true
+
 	return next => (...args) => {
 		try {
 			const result = next(...args)
@@ -81,7 +86,8 @@ export function onAfter<
 					},
 					(error: Err) => {
 						callback(args, error, undefined)
-						throw error
+						if (rethrow)
+							throw error
 					},
 				)
 			}
@@ -89,7 +95,8 @@ export function onAfter<
 		}
 		catch (error) {
 			callback(args, error as Err, undefined)
-			throw error
+			if (rethrow)
+				throw error
 		}
 	}
 }
@@ -99,20 +106,27 @@ export function onError<
 	Err = unknown,
 >(
 	callback: (args: Parameters<Fn>, error: Err) => void,
+	options?: {
+		rethrow?: boolean
+	}
 ): MiddlewareFn<Fn> {
+	const rethrow = options?.rethrow ?? true
+
 	return next => (...args) => {
 		try {
 			const result = next(...args)
 			if (isNativePromise(result) || isPromiseLike(result)) {
 				return result.then(undefined, (error: Err) => {
 					callback(args, error)
-					throw error
+					if (rethrow)
+						throw error
 				})
 			}
 		}
 		catch (error) {
 			callback(args, error as Err)
-			throw error
+			if (rethrow)
+				throw error
 		}
 	}
 }
