@@ -71,7 +71,7 @@ export function onAfter<
 	},
 	options?: {
 		rethrow?: boolean
-	}
+	},
 ): MiddlewareFn<Fn> {
 	const rethrow = options?.rethrow ?? true
 
@@ -108,7 +108,7 @@ export function onError<
 	callback: (args: Parameters<Fn>, error: Err) => void,
 	options?: {
 		rethrow?: boolean
-	}
+	},
 ): MiddlewareFn<Fn> {
 	const rethrow = options?.rethrow ?? true
 
