@@ -193,7 +193,7 @@ function createDispatch<Fn extends AnyFunction>(
 			return next()
 		if (nextCalled && result === nextResult)
 			return result as ReturnType<Fn>
-		if (result instanceof Promise || isPromiseLike(result))
+		if (isNativePromise(result) || isPromiseLike(result))
 			return result.then((resolved: any) => resolved === undefined ? next() : resolved) as ReturnType<Fn>
 		return result as ReturnType<Fn>
 	}
