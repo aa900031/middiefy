@@ -78,7 +78,7 @@ export function onAfter<
 	return next => (...args) => {
 		try {
 			const result = next(...args)
-			if (isNativePromise(result) || isPromiseLike(result)) {
+			if (((result as unknown) instanceof Promise) || isPromiseLike(result)) {
 				return result.then(
 					(resolved: ResolvedReturn<Fn>) => {
 						callback(args, undefined, resolved)
@@ -115,7 +115,7 @@ export function onError<
 	return next => (...args) => {
 		try {
 			const result = next(...args)
-			if (isNativePromise(result) || isPromiseLike(result)) {
+			if (((result as unknown) instanceof Promise) || isPromiseLike(result)) {
 				return result.then(undefined, (error: Err) => {
 					callback(args, error)
 					if (rethrow)
@@ -193,7 +193,7 @@ function createDispatch<Fn extends AnyFunction>(
 			return next()
 		if (nextCalled && result === nextResult)
 			return result as ReturnType<Fn>
-		if (isNativePromise(result) || isPromiseLike(result))
+		if ((result instanceof Promise) || isPromiseLike(result))
 			return result.then((resolved: any) => resolved === undefined ? next() : resolved) as ReturnType<Fn>
 		return result as ReturnType<Fn>
 	}
@@ -208,10 +208,4 @@ function isPromiseLike(
 		&& typeof value === 'object'
 		&& 'then' in value
 		&& typeof value.then === 'function'
-}
-
-function isNativePromise(
-	value: unknown,
-): value is Promise<any> {
-	return value instanceof Promise
 }
