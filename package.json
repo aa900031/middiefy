@@ -16,6 +16,7 @@
 	],
 	"exports": {
 		".": "./src/index.ts",
+		"./helper": "./src/helper.ts",
 		"./package.json": "./package.json"
 	},
 	"main": "./dist/index.cjs",
@@ -63,6 +64,16 @@
 				"require": {
 					"types": "./dist/index.d.cts",
 					"default": "./dist/index.cjs"
+				}
+			},
+			"./helper": {
+				"import": {
+					"types": "./dist/helper.d.ts",
+					"default": "./dist/helper.js"
+				},
+				"require": {
+					"types": "./dist/helper.d.cts",
+					"default": "./dist/helper.cjs"
 				}
 			},
 			"./package.json": "./package.json"

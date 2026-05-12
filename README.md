@@ -32,13 +32,13 @@ const greet = middiefy((greeting: string, name: string) => {
 })
 
 greet.add(
-	next => (greeting, name) => {
-		return next(greeting.toUpperCase(), name.trim())
+	(next, [greeting, name]) => {
+		return next([greeting.toUpperCase(), name.trim()])
 	},
-	next => (greeting, name) => {
+	(next, [greeting, name]) => {
 		if (name.length === 0)
 			return 'missing name'
-		return next(greeting, name)
+		return next()
 	},
 )
 
@@ -76,6 +76,8 @@ Returns a callable wrapper with the same parameters and return type as `fn`.
 
 Registers middleware in call order and returns the same wrapper.
 
+Middleware functions receive `next` as the first argument and the wrapped argument tuple as the second argument.
+
 ### wrapper.remove(middleware)
 
 Removes middleware by reference and returns the same wrapper.
@@ -99,17 +101,24 @@ Observes thrown or rejected errors, then rethrows them.
 ## Middleware rules
 
 - `next()` continues with the current arguments.
-- `next(...args)` continues with replaced arguments.
+- `next(args)` continues with a replaced argument tuple.
 - Returning a value short-circuits the chain.
 - Returning `undefined` falls through to the next step.
-- Repeated `next()` calls inside one middleware reuse the same downstream result or error.
+- Repeated `next()` calls inside one middleware re-execute downstream each time.
 - If an earlier middleware throws, later middleware is not called.
+
+## Performance guidance
+
+- Prefer `next()` when a middleware does not change arguments.
+- Use `next(args)` only when replacing the argument tuple.
+- In hot paths, avoid creating a new args tuple just to pass the same values through.
 
 ## Notes
 
 - Middleware runs in onion order: registration order on the way in, reverse order on the way out.
 - Sync, async, and promise-like fallthrough are supported.
 - Calls without middleware use a direct fast path.
+- The default dispatcher uses a compiled static middleware chain; the experimental indexed dispatcher was not faster for common passthrough or transform pipelines.
 
 Run tests with:
 
