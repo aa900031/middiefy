@@ -25,6 +25,21 @@ describe('middiefy', () => {
 		expect(fn).toHaveBeenCalledOnce()
 	})
 
+	it('supports reading args from context.args', () => {
+		const wrapped = middiefy((greeting: string, name: string) => {
+			return `${greeting} ${name}`
+		})
+
+		wrapped.add(
+			(context) => {
+				const [greeting, name] = context.args
+				return context.next(greeting.toUpperCase(), name.trim())
+			},
+		)
+
+		expect(wrapped('hello', ' zhong666 ')).toBe('HELLO zhong666')
+	})
+
 	it('runs middleware in onion order and allows argument transforms', () => {
 		const steps: string[] = []
 		const wrapped = middiefy<SyncFn>((names) => {
@@ -33,15 +48,17 @@ describe('middiefy', () => {
 		})
 
 		wrapped.add(
-			(next, [names]) => {
+			(context) => {
+				const [names] = context.args
 				steps.push('enter:1')
-				const result = next([[...names, 'first']])
+				const result = context.next([...names, 'first'])
 				steps.push('exit:1')
 				return result
 			},
-			(next, [names]) => {
+			(context) => {
+				const [names] = context.args
 				steps.push('enter:2')
-				const result = next([[...names, 'second']])
+				const result = context.next([...names, 'second'])
 				steps.push('exit:2')
 				return result
 			},
@@ -66,12 +83,13 @@ describe('middiefy', () => {
 		})
 
 		wrapped.add(
-			(_next, [names]) => {
+			({ args: [names] }) => {
 				steps.push(`observe:${names.join(',')}`)
 			},
-			(next, [names]) => {
+			(context) => {
+				const [names] = context.args
 				steps.push('transform')
-				next([[...names, 'other']])
+				return context.next([...names, 'other'])
 			},
 		)
 
@@ -93,7 +111,8 @@ describe('middiefy', () => {
 		})
 
 		validateNames.add(
-			(next, [names]) => {
+			(context) => {
+				const [names] = context.args
 				const normalizedNames = names.map(name => name.trim())
 				if (normalizedNames.some(name => name.length === 0)) {
 					return {
@@ -101,7 +120,7 @@ describe('middiefy', () => {
 						errors: ['blank names are not allowed'],
 					}
 				}
-				return next([normalizedNames])
+				return context.next(normalizedNames)
 			},
 		)
 
@@ -115,17 +134,25 @@ describe('middiefy', () => {
 		})
 	})
 
-	it('re-executes downstream when next is called multiple times', () => {
+	it('throws when next is called multiple times in one middleware', () => {
 		const base = vi.fn<(names: string[]) => { names: string[] }>((names) => {
 			return { names }
 		})
 		const wrapped = middiefy(base)
+		let secondError: unknown
 
 		wrapped.add(
-			(next, [names]) => {
-				const firstResult = next([[...names, 'first']])
-				const secondResult = next([[...names, 'second']])
-				expect(secondResult).not.toBe(firstResult)
+			(context) => {
+				const [names] = context.args
+				const firstResult = context.next([...names, 'first'])
+
+				try {
+					context.next([...names, 'second'])
+				}
+				catch (error) {
+					secondError = error
+				}
+
 				return firstResult
 			},
 		)
@@ -133,75 +160,74 @@ describe('middiefy', () => {
 		expect(wrapped(['zhong666'])).toEqual({
 			names: ['zhong666', 'first'],
 		})
-		expect(base).toHaveBeenCalledTimes(2)
+		expect(secondError).toEqual(new Error('middiefy: next() can only be called once per middleware'))
+		expect(base).toHaveBeenCalledTimes(1)
 		expect(base).toHaveBeenNthCalledWith(1, ['zhong666', 'first'])
-		expect(base).toHaveBeenNthCalledWith(2, ['zhong666', 'second'])
 	})
 
-	it('rethrows downstream sync errors on every next call', () => {
-		const syncError1 = new Error('sync boom 1')
-		const syncError2 = new Error('sync boom 2')
-		const base = vi.fn<(value: number) => number>((value) => {
-			throw value === 1 ? syncError1 : syncError2
+	it('preserves downstream sync errors from the first next call', () => {
+		const syncError = new Error('sync boom')
+		const base = vi.fn<(value: number) => number>(() => {
+			throw syncError
 		})
 		const wrapped = middiefy(base)
 
 		wrapped.add(
-			(next, [value]) => {
+			(context) => {
+				const [value] = context.args
 				let firstCaught: unknown
 				let secondCaught: unknown
 
 				try {
-					next([value])
+					context.next(value)
 				}
 				catch (caught) {
 					firstCaught = caught
 				}
 
 				try {
-					next([value + 1])
+					context.next(value + 1)
 				}
 				catch (caught) {
 					secondCaught = caught
 				}
 
-				expect(firstCaught).toBe(syncError1)
-				expect(secondCaught).toBe(syncError2)
+				expect(firstCaught).toBe(syncError)
+				expect(secondCaught).toEqual(new Error('middiefy: next() can only be called once per middleware'))
 				return 42
 			},
 		)
 
 		expect(wrapped(1)).toBe(42)
-		expect(base).toHaveBeenCalledTimes(2)
+		expect(base).toHaveBeenCalledTimes(1)
 		expect(base).toHaveBeenNthCalledWith(1, 1)
-		expect(base).toHaveBeenNthCalledWith(2, 2)
 	})
 
-	it('creates a fresh rejected promise on every next call', async () => {
-		const firstError = new Error('async boom 1')
-		const secondError = new Error('async boom 2')
-		const base = vi.fn<(value: number) => Promise<number>>(async (value) => {
-			throw value === 1 ? firstError : secondError
+	it('rejects repeated next calls in async middleware', async () => {
+		const firstError = new Error('async boom')
+		const base = vi.fn<(value: number) => Promise<number>>(async () => {
+			throw firstError
 		})
 		const wrapped = middiefy(base)
 
 		wrapped.add(
-			(next, [value]) => {
-				const firstResult = next([value])
-				const secondResult = next([value + 1])
-				expect(secondResult).not.toBe(firstResult)
+			(context) => {
+				const [value] = context.args
+				const firstResult = context.next(value)
+
 				return firstResult.catch((caught) => {
 					expect(caught).toBe(firstError)
+					expect(() => {
+						context.next(value + 1)
+					}).toThrow('middiefy: next() can only be called once per middleware')
 					return 24
 				})
 			},
 		)
 
 		await expect(wrapped(1)).resolves.toBe(24)
-		await expect(base.mock.results[1]?.value).rejects.toBe(secondError)
-		expect(base).toHaveBeenCalledTimes(2)
+		expect(base).toHaveBeenCalledTimes(1)
 		expect(base).toHaveBeenNthCalledWith(1, 1)
-		expect(base).toHaveBeenNthCalledWith(2, 2)
 	})
 
 	it('isolates async next execution across concurrent calls', async () => {
@@ -215,11 +241,10 @@ describe('middiefy', () => {
 		const seen: Promise<number>[] = []
 
 		wrapped.add(
-			async (next, [value]) => {
-				const first = next([value])
-				const second = next([value + 100])
-				expect(second).not.toBe(first)
-				seen.push(first, second)
+			async (context) => {
+				const [value] = context.args
+				const first = context.next(value)
+				seen.push(first)
 				return await first
 			},
 		)
@@ -227,19 +252,13 @@ describe('middiefy', () => {
 		const firstCall = wrapped(1)
 		const secondCall = wrapped(2)
 
-		expect(base).toHaveBeenCalledTimes(4)
+		expect(base).toHaveBeenCalledTimes(2)
 		expect(base).toHaveBeenNthCalledWith(1, 1)
-		expect(base).toHaveBeenNthCalledWith(2, 101)
-		expect(base).toHaveBeenNthCalledWith(3, 2)
-		expect(base).toHaveBeenNthCalledWith(4, 102)
-		expect(seen).toHaveLength(4)
-		expect(seen[0]).not.toBe(seen[1])
-		expect(seen[2]).not.toBe(seen[3])
+		expect(base).toHaveBeenNthCalledWith(2, 2)
+		expect(seen).toHaveLength(2)
 
 		resolvers.get(1)?.(2)
-		resolvers.get(101)?.(202)
 		resolvers.get(2)?.(4)
-		resolvers.get(102)?.(204)
 
 		await expect(firstCall).resolves.toBe(2)
 		await expect(secondCall).resolves.toBe(4)
@@ -255,9 +274,10 @@ describe('middiefy', () => {
 			() => {
 				throw error
 			},
-			(next, [value]) => {
+			(context) => {
+				const [value] = context.args
 				passThroughCalled = true
-				return next([value])
+				return context.next(value)
 			},
 		)
 
@@ -268,8 +288,14 @@ describe('middiefy', () => {
 
 	it('updates the pipeline after add and remove', () => {
 		const wrapped = middiefy((names: string[]) => names.join(','))
-		const appendOther: MiddlewareFn<SyncFn> = (next, [names]) => next([[...names, 'other']])
-		const sameShapeButDifferentReference: MiddlewareFn<SyncFn> = (next, [names]) => next([[...names, 'other']])
+		const appendOther: MiddlewareFn<SyncFn> = (context) => {
+			const [names] = context.args
+			return context.next([...names, 'other'])
+		}
+		const sameShapeButDifferentReference: MiddlewareFn<SyncFn> = (context) => {
+			const [names] = context.args
+			return context.next([...names, 'other'])
+		}
 
 		expect(wrapped(['zhong666'])).toBe('zhong666')
 
@@ -288,7 +314,10 @@ describe('middiefy', () => {
 		const wrapped = middiefy((value: number) => value)
 
 		wrapped.add(
-			(next, [value]) => next([value + ++calls]),
+			(context) => {
+				const [value] = context.args
+				return context.next(value + ++calls)
+			},
 		)
 
 		expect(wrapped(1)).toBe(2)
@@ -298,7 +327,10 @@ describe('middiefy', () => {
 
 	it('deduplicates identical middleware references', () => {
 		const wrapped = middiefy((names: string[]) => names.join(','))
-		const appendOther: MiddlewareFn<SyncFn> = (next, [names]) => next([[...names, 'other']])
+		const appendOther: MiddlewareFn<SyncFn> = (context) => {
+			const [names] = context.args
+			return context.next([...names, 'other'])
+		}
 
 		wrapped.add(appendOther, appendOther)
 
@@ -311,7 +343,10 @@ describe('middiefy', () => {
 		})
 
 		wrapped.add(
-			(next, [greeting, names]) => next([greeting.toUpperCase(), [...names, 'other']]),
+			(context) => {
+				const [greeting, names] = context.args
+				return context.next(greeting.toUpperCase(), [...names, 'other'])
+			},
 		)
 
 		expect(wrapped('hello', ['zhong666'])).toBe('HELLO zhong666,other')
@@ -325,13 +360,14 @@ describe('middiefy', () => {
 		})
 
 		wrapped.add(
-			async (next, [value]) => {
+			async (context) => {
+				const [value] = context.args
 				steps.push('enter:1')
-				const result = await next([value + 1])
+				const result = await context.next(value + 1)
 				steps.push(`exit:1:${result}`)
 				return result
 			},
-			async (_next, [value]) => {
+			async ({ args: [value] }) => {
 				steps.push(`observe:${value}`)
 				await Promise.resolve()
 			},
@@ -351,8 +387,9 @@ describe('middiefy', () => {
 		let downstreamPromise: Promise<number> | undefined
 
 		wrapped.add(
-			(next, [value]) => {
-				downstreamPromise = next([value + 1])
+			(context) => {
+				const [value] = context.args
+				downstreamPromise = context.next(value + 1)
 				return downstreamPromise
 			},
 		)
@@ -424,11 +461,12 @@ describe('middiefy', () => {
 		}
 
 		middlewareize.add(
-			(next, [value]) => {
+			(context) => {
+				const [value] = context.args
 				steps.push(`sync:${value}`)
-				return next([value + 1])
+				return context.next(value + 1)
 			},
-			(_next, [value]) => {
+			({ args: [value] }) => {
 				steps.push(`promise-like:${value}`)
 				return thenable
 			},

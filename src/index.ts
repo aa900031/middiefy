@@ -9,8 +9,7 @@ export interface Middiefy<T extends AnyFunction> {
 
 export type MiddlewareFn<
 	Fn extends AnyFunction,
-	Result extends MiddlewareReturn<Fn> = MiddlewareReturn<Fn>,
-> = (next: MiddlewareNextFn<Fn>, args: Parameters<Fn>) => Result | void
+> = (context: MiddlewareContext<Fn>) => MiddlewareReturn<Fn> | void
 
 export type MiddlewareReturn<Fn extends AnyFunction>
 	= ReturnType<Fn> extends PromiseLike<infer Resolved>
@@ -21,7 +20,14 @@ export interface MiddlewareNextFn<
 	Fn extends AnyFunction,
 > {
 	(): ReturnType<Fn>
-	(args: Parameters<Fn> | undefined): ReturnType<Fn>
+	(...args: Parameters<Fn>): ReturnType<Fn>
+}
+
+export interface MiddlewareContext<
+	Fn extends AnyFunction,
+> {
+	readonly next: MiddlewareNextFn<Fn>
+	readonly args: Parameters<Fn>
 }
 
 export function middiefy<Fn extends AnyFunction>(
@@ -79,22 +85,28 @@ function composeMiddlewareLayer<Fn extends AnyFunction>(
 		let nextCalled = false
 		let nextResult!: ReturnType<Fn>
 
-		const next: MiddlewareNextFn<Fn> = (argsFromNext?: Parameters<Fn>) => {
-			nextResult = downstream(argsFromNext === undefined ? args : argsFromNext)
-			nextCalled = true
-			return nextResult
+		const context: MiddlewareContext<Fn> = {
+			args,
+			next: (...nextArgs: Parameters<Fn>) => {
+				if (nextCalled)
+					throw new Error('middiefy: next() can only be called once per middleware')
+
+				nextCalled = true
+				nextResult = downstream(nextArgs.length === 0 ? args : nextArgs)
+				return nextResult
+			},
 		}
 
-		const result = middleware(next, args)
+		const result = middleware(context)
 		if (result === undefined)
-			return nextCalled ? nextResult : next()
+			return nextCalled ? nextResult : context.next()
 		if (nextCalled && result === nextResult)
 			return result as ReturnType<Fn>
 		if (isThenable(result)) {
 			return result.then((resolved: any) => {
 				if (resolved !== undefined)
 					return resolved
-				return nextCalled ? nextResult : next()
+				return nextCalled ? nextResult : context.next()
 			}) as ReturnType<Fn>
 		}
 		return result as ReturnType<Fn>

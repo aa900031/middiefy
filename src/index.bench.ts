@@ -35,7 +35,7 @@ describe('sync passthrough: no middleware', () => {
 
 describe('sync passthrough: one middleware', () => {
 	const input = ['zhong666']
-	const wrapped = middiefy(syncFn).add(next => next())
+	const wrapped = middiefy(syncFn).add(({ next }) => next())
 
 	bench('baseline', () => {
 		;((names: string[]) => syncFn(names))(input)
@@ -48,9 +48,9 @@ describe('sync passthrough: one middleware', () => {
 describe('sync passthrough: three middlewares', () => {
 	const input = ['zhong666']
 	const wrapped = middiefy(syncFn).add(
-		next => next(),
-		next => next(),
-		next => next(),
+		({ next }) => next(),
+		({ next }) => next(),
+		({ next }) => next(),
 	)
 
 	bench('baseline', () => {
@@ -65,7 +65,10 @@ describe('sync passthrough: three middlewares', () => {
 
 describe('sync transform: one middleware', () => {
 	const input = ['zhong666']
-	const wrapped = middiefy(syncFn).add((next, [names]) => next([[...names, 'other']]))
+	const wrapped = middiefy(syncFn).add((context) => {
+		const [names] = context.args
+		return context.next([...names, 'other'])
+	})
 
 	bench('baseline', () => {
 		;((names: string[]) => syncFn([...names, 'other']))(input)
@@ -78,9 +81,18 @@ describe('sync transform: one middleware', () => {
 describe('sync transform: three middlewares', () => {
 	const input = ['zhong666']
 	const wrapped = middiefy(syncFn).add(
-		(next, [names]) => next([[...names, 'first']]),
-		(next, [names]) => next([[...names, 'second']]),
-		(next, [names]) => next([[...names, 'third']]),
+		(context) => {
+			const [names] = context.args
+			return context.next([...names, 'first'])
+		},
+		(context) => {
+			const [names] = context.args
+			return context.next([...names, 'second'])
+		},
+		(context) => {
+			const [names] = context.args
+			return context.next([...names, 'third'])
+		},
 	)
 
 	bench('baseline', () => {
@@ -110,7 +122,7 @@ describe('async passthrough: no middleware', () => {
 })
 
 describe('async passthrough: one sync middleware', () => {
-	const wrapped = middiefy(asyncFn).add(next => next())
+	const wrapped = middiefy(asyncFn).add(({ next }) => next())
 
 	bench('baseline', async () => {
 		await ((value: number) => asyncFn(value))(1)
@@ -122,9 +134,9 @@ describe('async passthrough: one sync middleware', () => {
 
 describe('async passthrough: three sync middlewares', () => {
 	const wrapped = middiefy(asyncFn).add(
-		next => next(),
-		next => next(),
-		next => next(),
+		({ next }) => next(),
+		({ next }) => next(),
+		({ next }) => next(),
 	)
 
 	bench('baseline', async () => {
@@ -136,7 +148,7 @@ describe('async passthrough: three sync middlewares', () => {
 })
 
 describe('async passthrough: one async middleware', () => {
-	const wrapped = middiefy(asyncFn).add(async next => await next())
+	const wrapped = middiefy(asyncFn).add(async ({ next }) => await next())
 
 	bench('baseline', async () => {
 		await (async (value: number) => await asyncFn(value))(1)
@@ -151,7 +163,10 @@ describe('async passthrough: one async middleware', () => {
 describe('async fallthrough: sync short-circuit', () => {
 	// first calls next(value+1), second returns undefined → fallthrough → asyncFn(value+1)
 	const wrapped = middiefy(asyncFn).add(
-		async (next, [value]) => await next([value + 1]),
+		async (context) => {
+			const [value] = context.args
+			return await context.next(value + 1)
+		},
 		() => undefined,
 	)
 
@@ -165,7 +180,10 @@ describe('async fallthrough: sync short-circuit', () => {
 
 describe('async fallthrough: async fallthrough', () => {
 	const wrapped = middiefy(asyncFn).add(
-		async (next, [value]) => await next([value + 1]),
+		async (context) => {
+			const [value] = context.args
+			return await context.next(value + 1)
+		},
 		async () => { await Promise.resolve() },
 	)
 
@@ -182,7 +200,10 @@ describe('async fallthrough: async fallthrough', () => {
 
 describe('async fallthrough: thenable fallthrough', () => {
 	const wrapped = middiefy(asyncFn).add(
-		async (next, [value]) => await next([value + 1]),
+		async (context) => {
+			const [value] = context.args
+			return await context.next(value + 1)
+		},
 		() => undefinedThenable,
 	)
 
@@ -199,7 +220,10 @@ describe('async fallthrough: thenable fallthrough', () => {
 
 describe('async fallthrough: sync middleware + thenable fallthrough', () => {
 	const wrapped = middiefy(asyncFn).add(
-		(next, [value]) => next([value + 1]),
+		(context) => {
+			const [value] = context.args
+			return context.next(value + 1)
+		},
 		() => undefinedThenable,
 	)
 
@@ -228,12 +252,16 @@ describe('sync short-circuit return', () => {
 	})
 })
 
-describe('sync repeated next call', () => {
+describe('sync repeated next guard', () => {
 	const input = ['zhong666']
 	const wrapped = middiefy(syncFn).add(
-		(next, [names]) => {
-			const result = next([[...names, 'first']])
-			next([[...names, 'second']])
+		(context) => {
+			const [names] = context.args
+			const result = context.next([...names, 'first'])
+			try {
+				context.next([...names, 'second'])
+			}
+			catch {}
 			return result
 		},
 	)
@@ -241,7 +269,10 @@ describe('sync repeated next call', () => {
 	bench('baseline', () => {
 		;((names: string[]) => {
 			const result = syncFn([...names, 'first'])
-			syncFn([...names, 'second'])
+			try {
+				throw new Error('middiefy: next() can only be called once per middleware')
+			}
+			catch {}
 			return result
 		})(input)
 	})
@@ -251,8 +282,14 @@ describe('sync repeated next call', () => {
 })
 
 describe('middleware add/remove churn', () => {
-	const appendOther: MiddlewareFn<SyncFn> = (next, [names]) => next([[...names, 'other']])
-	const appendFirst: MiddlewareFn<SyncFn> = (next, [names]) => next([[...names, 'first']])
+	const appendOther: MiddlewareFn<SyncFn> = (context) => {
+		const [names] = context.args
+		return context.next([...names, 'other'])
+	}
+	const appendFirst: MiddlewareFn<SyncFn> = (context) => {
+		const [names] = context.args
+		return context.next([...names, 'first'])
+	}
 	const wrapped = middiefy(syncFn)
 	const set = new Set<MiddlewareFn<SyncFn>>()
 
@@ -275,11 +312,11 @@ describe('lazy short-circuit rebuild', () => {
 	const input = ['zhong666']
 	const shortCircuit: MiddlewareFn<SyncFn> = () => 'blocked'
 	const passthroughMiddlewares: MiddlewareFn<SyncFn>[] = [
-		next => next(),
-		next => next(),
-		next => next(),
-		next => next(),
-		next => next(),
+		({ next }) => next(),
+		({ next }) => next(),
+		({ next }) => next(),
+		({ next }) => next(),
+		({ next }) => next(),
 	]
 	const wrapped = middiefy(syncFn)
 
@@ -287,9 +324,10 @@ describe('lazy short-circuit rebuild', () => {
 		const all = [shortCircuit, ...passthroughMiddlewares]
 		const composed = all.reduceRight<SyncFn>(
 			(next, mw) => (...args) => {
-				// eslint-disable-next-line ts/ban-ts-comment
-				// @ts-expect-error
-				const r = mw(a => next(...((a && a.length > 0 ? a : args))), args)
+				const r = mw({
+					next: () => next(...args),
+					args,
+				})
 				return (r === undefined ? next(...args) : r) as string
 			},
 			syncFn,

@@ -1,14 +1,14 @@
-import type { MiddlewareFn } from '.'
+import type { MiddlewareArgs, MiddlewareFn } from '.'
 import type { AnyFunction, ResolvedReturn } from './utils'
 import { isThenable } from './utils'
 
 export function onBefore<
 	Fn extends AnyFunction,
 >(
-	callback: (args: Parameters<Fn>) => void,
+	callback: (args: MiddlewareArgs<Fn>) => void,
 ): MiddlewareFn<Fn> {
-	return (_next, args) => {
-		callback(args)
+	return (context) => {
+		callback(context.args)
 	}
 }
 
@@ -17,29 +17,29 @@ export function onAfter<
 	Err = unknown,
 >(
 	callback: {
-		(args: Parameters<Fn>, error: Err, result: undefined): void
-		(args: Parameters<Fn>, error: undefined, result: ResolvedReturn<Fn>): void
+		(args: MiddlewareArgs<Fn>, error: Err, result: undefined): void
+		(args: MiddlewareArgs<Fn>, error: undefined, result: ResolvedReturn<Fn>): void
 	},
 ): MiddlewareFn<Fn> {
-	return (next, args) => {
+	return (context) => {
 		try {
-			const result = next()
+			const result = context.next()
 			if (isThenable(result)) {
 				return result.then(
 					(resolved: ResolvedReturn<Fn>) => {
-						callback(args, undefined, resolved)
+						callback(context.args, undefined, resolved)
 						return resolved
 					},
 					(error: Err) => {
-						callback(args, error, undefined)
+						callback(context.args, error, undefined)
 						throw error
 					},
 				)
 			}
-			callback(args, undefined, result as ResolvedReturn<Fn>)
+			callback(context.args, undefined, result as ResolvedReturn<Fn>)
 		}
 		catch (error) {
-			callback(args, error as Err, undefined)
+			callback(context.args, error as Err, undefined)
 			throw error
 		}
 	}
@@ -49,20 +49,20 @@ export function onError<
 	Fn extends AnyFunction,
 	Err = unknown,
 >(
-	callback: (args: Parameters<Fn>, error: Err) => void,
+	callback: (args: MiddlewareArgs<Fn>, error: Err) => void,
 ): MiddlewareFn<Fn> {
-	return (next, args) => {
+	return (context) => {
 		try {
-			const result = next()
+			const result = context.next()
 			if (isThenable(result)) {
 				return result.then(undefined, (error: Err) => {
-					callback(args, error)
+					callback(context.args, error)
 					throw error
 				})
 			}
 		}
 		catch (error) {
-			callback(args, error as Err)
+			callback(context.args, error as Err)
 			throw error
 		}
 	}
@@ -71,7 +71,9 @@ export function onError<
 export function transformArgs<
 	Fn extends AnyFunction,
 >(
-	transform: (args: Parameters<Fn>) => Parameters<Fn>,
+	transform: (args: MiddlewareArgs<Fn>) => Parameters<Fn>,
 ): MiddlewareFn<Fn> {
-	return (next, args) => next(transform(args))
+	return (context) => {
+		return context.next(...transform(context.args))
+	}
 }
