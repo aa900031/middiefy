@@ -37,6 +37,7 @@ export function onAfter<
 				)
 			}
 			callback(context.args, undefined, result as ResolvedReturn<Fn>)
+			return result
 		}
 		catch (error) {
 			callback(context.args, error as Err, undefined)

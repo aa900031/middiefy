@@ -63,7 +63,8 @@ type DispatchFn<Fn extends AnyFunction> = (args: Parameters<Fn>) => ReturnType<F
 
 class ContextImpl<Fn extends AnyFunction> implements MiddlewareContext<Fn> {
 	#nextCalled = false
-	#nextResult!: ReturnType<Fn>
+	#nextResult: ReturnType<Fn> | undefined
+
 	#downstream: DispatchFn<Fn>
 
 	constructor(
@@ -86,7 +87,7 @@ class ContextImpl<Fn extends AnyFunction> implements MiddlewareContext<Fn> {
 			throw new Error('middiefy: next() can only be called once per middleware')
 		this.#nextCalled = true
 		this.#nextResult = this.#downstream(this.args)
-		return this.#nextResult
+		return this.#nextResult!
 	}
 
 	nextWith(...args: Parameters<Fn>): ReturnType<Fn> {
@@ -94,7 +95,7 @@ class ContextImpl<Fn extends AnyFunction> implements MiddlewareContext<Fn> {
 			throw new Error('middiefy: next() can only be called once per middleware')
 		this.#nextCalled = true
 		this.#nextResult = this.#downstream(args)
-		return this.#nextResult
+		return this.#nextResult!
 	}
 }
 
