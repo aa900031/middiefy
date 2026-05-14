@@ -62,40 +62,28 @@ export function middiefy<Fn extends AnyFunction>(
 type DispatchFn<Fn extends AnyFunction> = (args: Parameters<Fn>) => ReturnType<Fn>
 
 class ContextImpl<Fn extends AnyFunction> implements MiddlewareContext<Fn> {
-	#nextCalled = false
-	#nextResult: ReturnType<Fn> | undefined
-
-	#downstream: DispatchFn<Fn>
+	nextCalled = false
+	nextResult: ReturnType<Fn> | undefined
 
 	constructor(
 		readonly args: Parameters<Fn>,
-		readonly downstream: DispatchFn<Fn>,
-	) {
-		this.#downstream = downstream
-	}
-
-	get nextCalled(): boolean {
-		return this.#nextCalled
-	}
-
-	get nextResult(): ReturnType<Fn> | undefined {
-		return this.#nextResult
-	}
+		private readonly downstream: DispatchFn<Fn>,
+	) {}
 
 	next(): ReturnType<Fn> {
-		if (this.#nextCalled)
+		if (this.nextCalled)
 			throw new Error('middiefy: next() can only be called once per middleware')
-		this.#nextCalled = true
-		this.#nextResult = this.#downstream(this.args)
-		return this.#nextResult!
+		this.nextCalled = true
+		this.nextResult = this.downstream(this.args)
+		return this.nextResult!
 	}
 
 	nextWith(...args: Parameters<Fn>): ReturnType<Fn> {
 		if (this.nextCalled)
 			throw new Error('middiefy: next() can only be called once per middleware')
-		this.#nextCalled = true
-		this.#nextResult = this.#downstream(args)
-		return this.#nextResult!
+		this.nextCalled = true
+		this.nextResult = this.downstream(args)
+		return this.nextResult!
 	}
 }
 
