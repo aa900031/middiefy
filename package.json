@@ -40,16 +40,16 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"devDependencies": {
-		"@aa900031/eslint-config": "^6.0.0",
-		"@aa900031/release-it-config": "^0.1.0",
+		"@aa900031/eslint-config": "^6.1.0",
+		"@aa900031/release-it-config": "^0.1.1",
 		"@aa900031/tsdown-config": "^0.2.0",
-		"@codspeed/vitest-plugin": "^5.3.0",
+		"@codspeed/vitest-plugin": "^5.4.0",
 		"@tsconfig/node22": "^22.0.5",
-		"@types/node": "^22.19.10",
+		"@types/node": "^22.19.17",
 		"@vitest/coverage-istanbul": "^3.2.4",
-		"eslint": "^9.39.2",
+		"eslint": "^9.39.4",
 		"release-it": "^19.2.4",
-		"tsdown": "^0.20.3",
+		"tsdown": "^0.21.10",
 		"typescript": "~5.9.3",
 		"vitest": "^3.2.4"
 	},
