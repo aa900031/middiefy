@@ -61,6 +61,7 @@ export function onError<
 					throw error
 				})
 			}
+			return result
 		}
 		catch (error) {
 			callback(context.args, error as Err)
