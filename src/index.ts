@@ -61,7 +61,7 @@ export function middiefy<Fn extends AnyFunction>(
 
 type DispatchFn<Fn extends AnyFunction> = (args: Parameters<Fn>) => ReturnType<Fn>
 
-class ContextImpl<Fn extends AnyFunction> implements MiddlewareContext<Fn> {
+class MiddlewareContextImpl<Fn extends AnyFunction> implements MiddlewareContext<Fn> {
 	nextCalled = false
 	nextResult: ReturnType<Fn> | undefined
 
@@ -102,7 +102,7 @@ function composeMiddlewareLayer<Fn extends AnyFunction>(
 	middleware: MiddlewareFn<Fn>,
 ): DispatchFn<Fn> {
 	return (args: Parameters<Fn>): ReturnType<Fn> => {
-		const ctx = new ContextImpl<Fn>(args, downstream)
+		const ctx = new MiddlewareContextImpl<Fn>(args, downstream)
 		const result = middleware(ctx)
 
 		if (result === undefined)
