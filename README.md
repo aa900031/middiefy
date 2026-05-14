@@ -51,7 +51,8 @@ greet('hello', ' zhong666 ')
 ### Helper middleware
 
 ```ts
-import { middiefy, onError, transformArgs } from 'middiefy'
+import { middiefy } from 'middiefy'
+import { onError, transformArgs } from 'middiefy/helper'
 
 const greet = middiefy((greeting: string, name: string) => {
 	return `${greeting} ${name}`

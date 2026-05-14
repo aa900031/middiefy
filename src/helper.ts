@@ -22,27 +22,28 @@ export function onAfter<
 	},
 ): MiddlewareFn<Fn> {
 	return (context) => {
+		let result: ReturnType<Fn>
 		try {
-			const result = context.next()
-			if (isThenable(result)) {
-				return result.then(
-					(resolved: ResolvedReturn<Fn>) => {
-						callback(context.args, undefined, resolved)
-						return resolved
-					},
-					(error: Err) => {
-						callback(context.args, error, undefined)
-						throw error
-					},
-				)
-			}
-			callback(context.args, undefined, result as ResolvedReturn<Fn>)
-			return result
+			result = context.next()
 		}
 		catch (error) {
 			callback(context.args, error as Err, undefined)
 			throw error
 		}
+		if (isThenable(result)) {
+			return result.then(
+				(resolved: ResolvedReturn<Fn>) => {
+					callback(context.args, undefined, resolved)
+					return resolved
+				},
+				(error: Err) => {
+					callback(context.args, error, undefined)
+					throw error
+				},
+			)
+		}
+		callback(context.args, undefined, result as ResolvedReturn<Fn>)
+		return result
 	}
 }
 
