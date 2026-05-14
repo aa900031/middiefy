@@ -1,6 +1,6 @@
 import type { MiddlewareFn } from '.'
 import { beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest'
-import { middiefy, onAfter, onBefore, onError, transformArgs } from '.'
+import { middiefy } from '.'
 
 describe('middiefy', () => {
 	const fn = vi.fn<SyncFn>((name: string[]): string => {
@@ -25,6 +25,21 @@ describe('middiefy', () => {
 		expect(fn).toHaveBeenCalledOnce()
 	})
 
+	it('supports reading args from context.args', () => {
+		const wrapped = middiefy((greeting: string, name: string) => {
+			return `${greeting} ${name}`
+		})
+
+		wrapped.add(
+			(context) => {
+				const [greeting, name] = context.args
+				return context.nextWith(greeting.toUpperCase(), name.trim())
+			},
+		)
+
+		expect(wrapped('hello', ' zhong666 ')).toBe('HELLO zhong666')
+	})
+
 	it('runs middleware in onion order and allows argument transforms', () => {
 		const steps: string[] = []
 		const wrapped = middiefy<SyncFn>((names) => {
@@ -33,15 +48,17 @@ describe('middiefy', () => {
 		})
 
 		wrapped.add(
-			next => (names) => {
+			(context) => {
+				const [names] = context.args
 				steps.push('enter:1')
-				const result = next([...names, 'first'])
+				const result = context.nextWith([...names, 'first'])
 				steps.push('exit:1')
 				return result
 			},
-			next => (names) => {
+			(context) => {
+				const [names] = context.args
 				steps.push('enter:2')
-				const result = next([...names, 'second'])
+				const result = context.nextWith([...names, 'second'])
 				steps.push('exit:2')
 				return result
 			},
@@ -66,12 +83,13 @@ describe('middiefy', () => {
 		})
 
 		wrapped.add(
-			() => (names) => {
+			({ args: [names] }) => {
 				steps.push(`observe:${names.join(',')}`)
 			},
-			next => (names) => {
+			(context) => {
+				const [names] = context.args
 				steps.push('transform')
-				next([...names, 'other'])
+				return context.nextWith([...names, 'other'])
 			},
 		)
 
@@ -93,7 +111,8 @@ describe('middiefy', () => {
 		})
 
 		validateNames.add(
-			next => (names) => {
+			(context) => {
+				const [names] = context.args
 				const normalizedNames = names.map(name => name.trim())
 				if (normalizedNames.some(name => name.length === 0)) {
 					return {
@@ -101,7 +120,7 @@ describe('middiefy', () => {
 						errors: ['blank names are not allowed'],
 					}
 				}
-				return next(normalizedNames)
+				return context.nextWith(normalizedNames)
 			},
 		)
 
@@ -115,17 +134,25 @@ describe('middiefy', () => {
 		})
 	})
 
-	it('reuses the cached downstream result when next is called multiple times', () => {
+	it('throws when next is called multiple times in one middleware', () => {
 		const base = vi.fn<(names: string[]) => { names: string[] }>((names) => {
 			return { names }
 		})
 		const wrapped = middiefy(base)
+		let secondError: unknown
 
 		wrapped.add(
-			next => (names) => {
-				const firstResult = next([...names, 'first'])
-				const secondResult = next([...names, 'second'])
-				expect(secondResult).toBe(firstResult)
+			(context) => {
+				const [names] = context.args
+				const firstResult = context.nextWith([...names, 'first'])
+
+				try {
+					context.nextWith([...names, 'second'])
+				}
+				catch (error) {
+					secondError = error
+				}
+
 				return firstResult
 			},
 		)
@@ -133,69 +160,108 @@ describe('middiefy', () => {
 		expect(wrapped(['zhong666'])).toEqual({
 			names: ['zhong666', 'first'],
 		})
-		expect(base).toHaveBeenCalledOnce()
-		expect(base).toHaveBeenCalledWith(['zhong666', 'first'])
+		expect(secondError).toEqual(new Error('middiefy: next() can only be called once per middleware'))
+		expect(base).toHaveBeenCalledTimes(1)
+		expect(base).toHaveBeenNthCalledWith(1, ['zhong666', 'first'])
 	})
 
-	it('rethrows the same sync error when next is called multiple times', () => {
-		const error = new Error('sync boom')
+	it('preserves downstream sync errors from the first next call', () => {
+		const syncError = new Error('sync boom')
 		const base = vi.fn<(value: number) => number>(() => {
-			throw error
+			throw syncError
 		})
 		const wrapped = middiefy(base)
 
 		wrapped.add(
-			next => (value) => {
-				let firstError: unknown
-				let secondError: unknown
+			(context) => {
+				const [value] = context.args
+				let firstCaught: unknown
+				let secondCaught: unknown
 
 				try {
-					next(value)
+					context.nextWith(value)
 				}
 				catch (caught) {
-					firstError = caught
+					firstCaught = caught
 				}
 
 				try {
-					next(value + 1)
+					context.nextWith(value + 1)
 				}
 				catch (caught) {
-					secondError = caught
+					secondCaught = caught
 				}
 
-				expect(firstError).toBe(error)
-				expect(secondError).toBe(error)
+				expect(firstCaught).toBe(syncError)
+				expect(secondCaught).toEqual(new Error('middiefy: next() can only be called once per middleware'))
 				return 42
 			},
 		)
 
 		expect(wrapped(1)).toBe(42)
-		expect(base).toHaveBeenCalledOnce()
-		expect(base).toHaveBeenCalledWith(1)
+		expect(base).toHaveBeenCalledTimes(1)
+		expect(base).toHaveBeenNthCalledWith(1, 1)
 	})
 
-	it('reuses the same rejected downstream promise when next is called multiple times', async () => {
-		const error = new Error('async boom')
+	it('rejects repeated next calls in async middleware', async () => {
+		const firstError = new Error('async boom')
 		const base = vi.fn<(value: number) => Promise<number>>(async () => {
-			throw error
+			throw firstError
 		})
 		const wrapped = middiefy(base)
 
 		wrapped.add(
-			next => (value) => {
-				const firstResult = next(value)
-				const secondResult = next(value + 1)
-				expect(secondResult).toBe(firstResult)
+			(context) => {
+				const [value] = context.args
+				const firstResult = context.nextWith(value)
+
 				return firstResult.catch((caught) => {
-					expect(caught).toBe(error)
+					expect(caught).toBe(firstError)
+					expect(() => {
+						context.nextWith(value + 1)
+					}).toThrow('middiefy: next() can only be called once per middleware')
 					return 24
 				})
 			},
 		)
 
 		await expect(wrapped(1)).resolves.toBe(24)
-		expect(base).toHaveBeenCalledOnce()
-		expect(base).toHaveBeenCalledWith(1)
+		expect(base).toHaveBeenCalledTimes(1)
+		expect(base).toHaveBeenNthCalledWith(1, 1)
+	})
+
+	it('isolates async next execution across concurrent calls', async () => {
+		const resolvers = new Map<number, (value: number) => void>()
+		const base = vi.fn<(value: number) => Promise<number>>((value) => {
+			return new Promise<number>((resolve) => {
+				resolvers.set(value, resolve)
+			})
+		})
+		const wrapped = middiefy(base)
+		const seen: Promise<number>[] = []
+
+		wrapped.add(
+			async (context) => {
+				const [value] = context.args
+				const first = context.nextWith(value)
+				seen.push(first)
+				return await first
+			},
+		)
+
+		const firstCall = wrapped(1)
+		const secondCall = wrapped(2)
+
+		expect(base).toHaveBeenCalledTimes(2)
+		expect(base).toHaveBeenNthCalledWith(1, 1)
+		expect(base).toHaveBeenNthCalledWith(2, 2)
+		expect(seen).toHaveLength(2)
+
+		resolvers.get(1)?.(2)
+		resolvers.get(2)?.(4)
+
+		await expect(firstCall).resolves.toBe(2)
+		await expect(secondCall).resolves.toBe(4)
 	})
 
 	it('stops calling remaining middleware and fn after an earlier middleware throws', () => {
@@ -205,12 +271,13 @@ describe('middiefy', () => {
 		let passThroughCalled = false
 
 		wrapped.add(
-			() => () => {
+			() => {
 				throw error
 			},
-			next => (value) => {
+			(context) => {
+				const [value] = context.args
 				passThroughCalled = true
-				return next(value)
+				return context.nextWith(value)
 			},
 		)
 
@@ -219,50 +286,16 @@ describe('middiefy', () => {
 		expect(base).not.toHaveBeenCalled()
 	})
 
-	it('onError observes the specific error thrown by downstream middleware', () => {
-		const base = vi.fn((value: number) => value * 2)
-		const observed = vi.fn<(args: [number], error: Error) => void>()
-
-		const error = new Error('downstream middleware boom')
-		const wrapped = middiefy(base)
-
-		wrapped.add(
-			onError<(value: number) => number, Error>(observed),
-			() => () => {
-				throw error
-			},
-		)
-
-		expect(() => wrapped(1)).toThrow(error)
-		expect(observed).toHaveBeenCalledOnce()
-		expect(observed).toHaveBeenCalledWith([1], error)
-		expect(base).not.toHaveBeenCalled()
-	})
-
-	it('does not invoke downstream onError when an earlier middleware throws first', () => {
-		const error = new Error('upstream middleware boom')
-		const base = vi.fn((value: number) => value * 2)
-		const wrapped = middiefy(base)
-		const observed = vi.fn<(args: [number], error: Error) => void>()
-
-		wrapped.add(
-			() => () => {
-				throw error
-			},
-			onError<(value: number) => number, Error>((args, caught) => {
-				observed(args, caught)
-			}),
-		)
-
-		expect(() => wrapped(1)).toThrow(error)
-		expect(observed).not.toHaveBeenCalled()
-		expect(base).not.toHaveBeenCalled()
-	})
-
 	it('updates the pipeline after add and remove', () => {
 		const wrapped = middiefy((names: string[]) => names.join(','))
-		const appendOther: MiddlewareFn<SyncFn> = next => names => next([...names, 'other'])
-		const sameShapeButDifferentReference: MiddlewareFn<SyncFn> = next => names => next([...names, 'other'])
+		const appendOther: MiddlewareFn<SyncFn> = (context) => {
+			const [names] = context.args
+			return context.nextWith([...names, 'other'])
+		}
+		const sameShapeButDifferentReference: MiddlewareFn<SyncFn> = (context) => {
+			const [names] = context.args
+			return context.nextWith([...names, 'other'])
+		}
 
 		expect(wrapped(['zhong666'])).toBe('zhong666')
 
@@ -276,13 +309,50 @@ describe('middiefy', () => {
 		expect(wrapped(['zhong666'])).toBe('zhong666')
 	})
 
+	it('preserves middleware instance state across wrapped calls', () => {
+		let calls = 0
+		const wrapped = middiefy((value: number) => value)
+
+		wrapped.add(
+			(context) => {
+				const [value] = context.args
+				return context.nextWith(value + ++calls)
+			},
+		)
+
+		expect(wrapped(1)).toBe(2)
+		expect(wrapped(1)).toBe(3)
+		expect(calls).toBe(2)
+	})
+
 	it('deduplicates identical middleware references', () => {
 		const wrapped = middiefy((names: string[]) => names.join(','))
-		const appendOther: MiddlewareFn<SyncFn> = next => names => next([...names, 'other'])
+		const appendOther: MiddlewareFn<SyncFn> = (context) => {
+			const [names] = context.args
+			return context.nextWith([...names, 'other'])
+		}
 
 		wrapped.add(appendOther, appendOther)
 
 		expect(wrapped(['zhong666'])).toBe('zhong666,other')
+	})
+
+	it('keeps the pipeline unchanged when add receives only existing middleware', () => {
+		const base = vi.fn((names: string[]) => names.join(','))
+		const wrapped = middiefy(base)
+		const appendOther: MiddlewareFn<SyncFn> = (context) => {
+			const [names] = context.args
+			return context.nextWith([...names, 'other'])
+		}
+
+		wrapped.add(appendOther)
+		expect(wrapped(['zhong666'])).toBe('zhong666,other')
+		base.mockClear()
+
+		wrapped.add(appendOther)
+		expect(wrapped(['zhong666'])).toBe('zhong666,other')
+		expect(base).toHaveBeenCalledOnce()
+		expect(base).toHaveBeenCalledWith(['zhong666', 'other'])
 	})
 
 	it('supports multi-argument functions', () => {
@@ -291,155 +361,13 @@ describe('middiefy', () => {
 		})
 
 		wrapped.add(
-			next => (greeting, names) => next(greeting.toUpperCase(), [...names, 'other']),
-		)
-
-		expect(wrapped('hello', ['zhong666'])).toBe('HELLO zhong666,other')
-	})
-
-	it('transformArgs rewrites the entire argument tuple before dispatch', () => {
-		const wrapped = middiefy((greeting: string, names: string[]) => {
-			return `${greeting} ${names.join(',')}`
-		})
-
-		wrapped.add(
-			transformArgs<(greeting: string, names: string[]) => string>(([greeting, names]) => [
-				greeting.toUpperCase(),
-				[...names, 'other'],
-			]),
-		)
-
-		expect(wrapped('hello', ['zhong666'])).toBe('HELLO zhong666,other')
-	})
-
-	it('transformArgs rewrites the entire argument tuple before async dispatch', async () => {
-		const wrapped = middiefy(async (greeting: string, names: string[]) => {
-			return `${greeting} ${names.join(',')}`
-		})
-
-		wrapped.add(
-			transformArgs<(greeting: string, names: string[]) => Promise<string>>(([greeting, names]) => [
-				greeting.toUpperCase(),
-				[...names, 'other'],
-			]),
-		)
-
-		await expect(wrapped('hello', ['zhong666'])).resolves.toBe('HELLO zhong666,other')
-	})
-
-	it('onBefore observes arguments before downstream execution', () => {
-		const steps: string[] = []
-		const wrapped = middiefy((value: number) => {
-			steps.push(`fn:${value}`)
-			return value * 2
-		})
-
-		wrapped.add(
-			onBefore<(value: number) => number>((args) => {
-				steps.push(`before:${args[0]}`)
-			}),
-		)
-
-		expect(wrapped(2)).toBe(4)
-		expect(steps).toEqual([
-			'before:2',
-			'fn:2',
-		])
-	})
-
-	it('onBefore observes arguments before async downstream execution', async () => {
-		const steps: string[] = []
-		const wrapped = middiefy(async (value: number) => {
-			steps.push(`fn:${value}`)
-			return value * 2
-		})
-
-		wrapped.add(
-			onBefore<(value: number) => Promise<number>>((args) => {
-				steps.push(`before:${args[0]}`)
-			}),
-		)
-
-		await expect(wrapped(2)).resolves.toBe(4)
-		expect(steps).toEqual([
-			'before:2',
-			'fn:2',
-		])
-	})
-
-	it('onAfter observes resolved results and errors without changing flow', async () => {
-		const events: string[] = []
-		const success = middiefy(async (value: number) => value * 2)
-		const failure = middiefy(async (value: number) => {
-			throw new Error(`boom:${value}`)
-		})
-
-		success.add(
-			onAfter<(value: number) => Promise<number>>((args, error, result) => {
-				events.push(`success:${args[0]}:${String(error)}:${String(result)}`)
-			}),
-		)
-		failure.add(
-			onAfter<(value: number) => Promise<never>>((args, error, result) => {
-				events.push(`failure:${args[0]}:${error instanceof Error ? error.message : String(error)}:${String(result)}`)
-			}),
-		)
-
-		await expect(success(2)).resolves.toBe(4)
-		await expect(failure(3)).rejects.toThrow('boom:3')
-		expect(events).toEqual([
-			'success:2:undefined:4',
-			'failure:3:boom:3:undefined',
-		])
-	})
-
-	it('onError observes sync and async errors and rethrows them', async () => {
-		const events: string[] = []
-		const syncFailure = middiefy((value: number) => {
-			throw new Error(`sync:${value}`)
-		})
-		const asyncFailure = middiefy(async (value: number) => {
-			throw new Error(`async:${value}`)
-		})
-
-		syncFailure.add(
-			onError<(value: number) => never>((args, error) => {
-				events.push(`sync:${args[0]}:${error instanceof Error ? error.message : String(error)}`)
-			}),
-		)
-		asyncFailure.add(
-			onError<(value: number) => Promise<never>>((args, error) => {
-				events.push(`async:${args[0]}:${error instanceof Error ? error.message : String(error)}`)
-			}),
-		)
-
-		expect(() => syncFailure(1)).toThrow('sync:1')
-		await expect(asyncFailure(2)).rejects.toThrow('async:2')
-		expect(events).toEqual([
-			'sync:1:sync:1',
-			'async:2:async:2',
-		])
-	})
-
-	it('onError observes the specific async rejection thrown by downstream middleware', async () => {
-		const error = new Error('async downstream middleware boom')
-		const base = vi.fn(async (value: number) => value * 2)
-		const wrapped = middiefy(base)
-		const observed = vi.fn<(args: [number], error: Error) => void>()
-
-		wrapped.add(
-			onError<(value: number) => Promise<number>, Error>((args, caught) => {
-				observed(args, caught)
-			}),
-			() => async () => {
-				throw error
+			(context) => {
+				const [greeting, names] = context.args
+				return context.nextWith(greeting.toUpperCase(), [...names, 'other'])
 			},
 		)
 
-		await expect(wrapped(1)).rejects.toBe(error)
-		expect(observed).toHaveBeenCalledOnce()
-		expect(observed).toHaveBeenCalledWith([1], error)
-		expect(base).not.toHaveBeenCalled()
+		expect(wrapped('hello', ['zhong666'])).toBe('HELLO zhong666,other')
 	})
 
 	it('supports async middleware and async fallthrough', async () => {
@@ -450,13 +378,14 @@ describe('middiefy', () => {
 		})
 
 		wrapped.add(
-			next => async (value) => {
+			async (context) => {
+				const [value] = context.args
 				steps.push('enter:1')
-				const result = await next(value + 1)
+				const result = await context.nextWith(value + 1)
 				steps.push(`exit:1:${result}`)
 				return result
 			},
-			() => async (value) => {
+			async ({ args: [value] }) => {
 				steps.push(`observe:${value}`)
 				await Promise.resolve()
 			},
@@ -476,8 +405,9 @@ describe('middiefy', () => {
 		let downstreamPromise: Promise<number> | undefined
 
 		wrapped.add(
-			next => (value) => {
-				downstreamPromise = next(value + 1)
+			(context) => {
+				const [value] = context.args
+				downstreamPromise = context.nextWith(value + 1)
 				return downstreamPromise
 			},
 		)
@@ -501,7 +431,44 @@ describe('middiefy', () => {
 		}
 
 		wrapped.add(
-			() => () => thenable,
+			() => thenable,
+		)
+
+		await expect(wrapped(2)).resolves.toBe(4)
+	})
+
+	it('reuses nextResult when async middleware resolves undefined after calling next', async () => {
+		const wrapped = middiefy(async (value: number) => value * 2)
+
+		wrapped.add(
+			(context) => {
+				const [value] = context.args
+				context.nextWith(value + 1)
+				return Promise.resolve(undefined)
+			},
+		)
+
+		await expect(wrapped(2)).resolves.toBe(6)
+	})
+
+	it('supports callable promise-like fallthrough for async middleware', async () => {
+		const wrapped = middiefy(async (value: number) => value * 2)
+		const thenable = Object.assign(
+			() => undefined,
+			{
+				then<TResult1 = number | undefined, TResult2 = never>(
+					onfulfilled?: ((value: number | undefined) => TResult1 | PromiseLike<TResult1>) | null,
+					_onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null,
+				): PromiseLike<TResult1 | TResult2> {
+					if (onfulfilled == null)
+						return Promise.resolve(undefined as TResult1)
+					return Promise.resolve(onfulfilled(undefined))
+				},
+			},
+		)
+
+		wrapped.add(
+			() => thenable,
 		)
 
 		await expect(wrapped(2)).resolves.toBe(4)
@@ -526,11 +493,12 @@ describe('middiefy', () => {
 		}
 
 		middlewareize.add(
-			next => (value) => {
+			(context) => {
+				const [value] = context.args
 				steps.push(`sync:${value}`)
-				return next(value + 1)
+				return context.nextWith(value + 1)
 			},
-			() => (value) => {
+			({ args: [value] }) => {
 				steps.push(`promise-like:${value}`)
 				return thenable
 			},
