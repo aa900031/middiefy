@@ -1,11 +1,11 @@
-import type { MiddlewareArgs, MiddlewareFn } from '.'
+import type { MiddlewareFn } from '.'
 import type { AnyFunction, ResolvedReturn } from './utils'
 import { isThenable } from './utils'
 
 export function onBefore<
 	Fn extends AnyFunction,
 >(
-	callback: (args: MiddlewareArgs<Fn>) => void,
+	callback: (args: Parameters<Fn>) => void,
 ): MiddlewareFn<Fn> {
 	return (context) => {
 		callback(context.args)
@@ -17,8 +17,8 @@ export function onAfter<
 	Err = unknown,
 >(
 	callback: {
-		(args: MiddlewareArgs<Fn>, error: Err, result: undefined): void
-		(args: MiddlewareArgs<Fn>, error: undefined, result: ResolvedReturn<Fn>): void
+		(args: Parameters<Fn>, error: Err, result: undefined): void
+		(args: Parameters<Fn>, error: undefined, result: ResolvedReturn<Fn>): void
 	},
 ): MiddlewareFn<Fn> {
 	return (context) => {
@@ -49,7 +49,7 @@ export function onError<
 	Fn extends AnyFunction,
 	Err = unknown,
 >(
-	callback: (args: MiddlewareArgs<Fn>, error: Err) => void,
+	callback: (args: Parameters<Fn>, error: Err) => void,
 ): MiddlewareFn<Fn> {
 	return (context) => {
 		try {
@@ -71,7 +71,7 @@ export function onError<
 export function transformArgs<
 	Fn extends AnyFunction,
 >(
-	transform: (args: MiddlewareArgs<Fn>) => Parameters<Fn>,
+	transform: (args: Parameters<Fn>) => Parameters<Fn>,
 ): MiddlewareFn<Fn> {
 	return (context) => {
 		return context.next(...transform(context.args))
