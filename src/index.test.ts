@@ -33,7 +33,7 @@ describe('middiefy', () => {
 		wrapped.add(
 			(context) => {
 				const [greeting, name] = context.args
-				return context.next(greeting.toUpperCase(), name.trim())
+				return context.nextWith(greeting.toUpperCase(), name.trim())
 			},
 		)
 
@@ -51,14 +51,14 @@ describe('middiefy', () => {
 			(context) => {
 				const [names] = context.args
 				steps.push('enter:1')
-				const result = context.next([...names, 'first'])
+				const result = context.nextWith([...names, 'first'])
 				steps.push('exit:1')
 				return result
 			},
 			(context) => {
 				const [names] = context.args
 				steps.push('enter:2')
-				const result = context.next([...names, 'second'])
+				const result = context.nextWith([...names, 'second'])
 				steps.push('exit:2')
 				return result
 			},
@@ -89,7 +89,7 @@ describe('middiefy', () => {
 			(context) => {
 				const [names] = context.args
 				steps.push('transform')
-				return context.next([...names, 'other'])
+				return context.nextWith([...names, 'other'])
 			},
 		)
 
@@ -120,7 +120,7 @@ describe('middiefy', () => {
 						errors: ['blank names are not allowed'],
 					}
 				}
-				return context.next(normalizedNames)
+				return context.nextWith(normalizedNames)
 			},
 		)
 
@@ -144,10 +144,10 @@ describe('middiefy', () => {
 		wrapped.add(
 			(context) => {
 				const [names] = context.args
-				const firstResult = context.next([...names, 'first'])
+				const firstResult = context.nextWith([...names, 'first'])
 
 				try {
-					context.next([...names, 'second'])
+					context.nextWith([...names, 'second'])
 				}
 				catch (error) {
 					secondError = error
@@ -179,14 +179,14 @@ describe('middiefy', () => {
 				let secondCaught: unknown
 
 				try {
-					context.next(value)
+					context.nextWith(value)
 				}
 				catch (caught) {
 					firstCaught = caught
 				}
 
 				try {
-					context.next(value + 1)
+					context.nextWith(value + 1)
 				}
 				catch (caught) {
 					secondCaught = caught
@@ -213,12 +213,12 @@ describe('middiefy', () => {
 		wrapped.add(
 			(context) => {
 				const [value] = context.args
-				const firstResult = context.next(value)
+				const firstResult = context.nextWith(value)
 
 				return firstResult.catch((caught) => {
 					expect(caught).toBe(firstError)
 					expect(() => {
-						context.next(value + 1)
+						context.nextWith(value + 1)
 					}).toThrow('middiefy: next() can only be called once per middleware')
 					return 24
 				})
@@ -243,7 +243,7 @@ describe('middiefy', () => {
 		wrapped.add(
 			async (context) => {
 				const [value] = context.args
-				const first = context.next(value)
+				const first = context.nextWith(value)
 				seen.push(first)
 				return await first
 			},
@@ -277,7 +277,7 @@ describe('middiefy', () => {
 			(context) => {
 				const [value] = context.args
 				passThroughCalled = true
-				return context.next(value)
+				return context.nextWith(value)
 			},
 		)
 
@@ -290,11 +290,11 @@ describe('middiefy', () => {
 		const wrapped = middiefy((names: string[]) => names.join(','))
 		const appendOther: MiddlewareFn<SyncFn> = (context) => {
 			const [names] = context.args
-			return context.next([...names, 'other'])
+			return context.nextWith([...names, 'other'])
 		}
 		const sameShapeButDifferentReference: MiddlewareFn<SyncFn> = (context) => {
 			const [names] = context.args
-			return context.next([...names, 'other'])
+			return context.nextWith([...names, 'other'])
 		}
 
 		expect(wrapped(['zhong666'])).toBe('zhong666')
@@ -316,7 +316,7 @@ describe('middiefy', () => {
 		wrapped.add(
 			(context) => {
 				const [value] = context.args
-				return context.next(value + ++calls)
+				return context.nextWith(value + ++calls)
 			},
 		)
 
@@ -329,7 +329,7 @@ describe('middiefy', () => {
 		const wrapped = middiefy((names: string[]) => names.join(','))
 		const appendOther: MiddlewareFn<SyncFn> = (context) => {
 			const [names] = context.args
-			return context.next([...names, 'other'])
+			return context.nextWith([...names, 'other'])
 		}
 
 		wrapped.add(appendOther, appendOther)
@@ -342,7 +342,7 @@ describe('middiefy', () => {
 		const wrapped = middiefy(base)
 		const appendOther: MiddlewareFn<SyncFn> = (context) => {
 			const [names] = context.args
-			return context.next([...names, 'other'])
+			return context.nextWith([...names, 'other'])
 		}
 
 		wrapped.add(appendOther)
@@ -363,7 +363,7 @@ describe('middiefy', () => {
 		wrapped.add(
 			(context) => {
 				const [greeting, names] = context.args
-				return context.next(greeting.toUpperCase(), [...names, 'other'])
+				return context.nextWith(greeting.toUpperCase(), [...names, 'other'])
 			},
 		)
 
@@ -381,7 +381,7 @@ describe('middiefy', () => {
 			async (context) => {
 				const [value] = context.args
 				steps.push('enter:1')
-				const result = await context.next(value + 1)
+				const result = await context.nextWith(value + 1)
 				steps.push(`exit:1:${result}`)
 				return result
 			},
@@ -407,7 +407,7 @@ describe('middiefy', () => {
 		wrapped.add(
 			(context) => {
 				const [value] = context.args
-				downstreamPromise = context.next(value + 1)
+				downstreamPromise = context.nextWith(value + 1)
 				return downstreamPromise
 			},
 		)
@@ -443,7 +443,7 @@ describe('middiefy', () => {
 		wrapped.add(
 			(context) => {
 				const [value] = context.args
-				context.next(value + 1)
+				context.nextWith(value + 1)
 				return Promise.resolve(undefined)
 			},
 		)
@@ -496,7 +496,7 @@ describe('middiefy', () => {
 			(context) => {
 				const [value] = context.args
 				steps.push(`sync:${value}`)
-				return context.next(value + 1)
+				return context.nextWith(value + 1)
 			},
 			({ args: [value] }) => {
 				steps.push(`promise-like:${value}`)

@@ -16,18 +16,12 @@ export type MiddlewareReturn<Fn extends AnyFunction>
 		? ReturnType<Fn> | PromiseLike<Resolved | undefined> | undefined
 		: ReturnType<Fn> | undefined
 
-export interface MiddlewareNextFn<
-	Fn extends AnyFunction,
-> {
-	(): ReturnType<Fn>
-	(...args: Parameters<Fn>): ReturnType<Fn>
-}
-
 export interface MiddlewareContext<
 	Fn extends AnyFunction,
 > {
-	readonly next: MiddlewareNextFn<Fn>
 	readonly args: Parameters<Fn>
+	next: () => ReturnType<Fn>
+	nextWith: (...args: Parameters<Fn>) => ReturnType<Fn>
 }
 
 export function middiefy<Fn extends AnyFunction>(
@@ -67,6 +61,43 @@ export function middiefy<Fn extends AnyFunction>(
 
 type DispatchFn<Fn extends AnyFunction> = (args: Parameters<Fn>) => ReturnType<Fn>
 
+class ContextImpl<Fn extends AnyFunction> implements MiddlewareContext<Fn> {
+	#nextCalled = false
+	#nextResult!: ReturnType<Fn>
+	#downstream: DispatchFn<Fn>
+
+	constructor(
+		readonly args: Parameters<Fn>,
+		readonly downstream: DispatchFn<Fn>,
+	) {
+		this.#downstream = downstream
+	}
+
+	get nextCalled(): boolean {
+		return this.#nextCalled
+	}
+
+	get nextResult(): ReturnType<Fn> | undefined {
+		return this.#nextResult
+	}
+
+	next(): ReturnType<Fn> {
+		if (this.#nextCalled)
+			throw new Error('middiefy: next() can only be called once per middleware')
+		this.#nextCalled = true
+		this.#nextResult = this.#downstream(this.args)
+		return this.#nextResult
+	}
+
+	nextWith(...args: Parameters<Fn>): ReturnType<Fn> {
+		if (this.nextCalled)
+			throw new Error('middiefy: next() can only be called once per middleware')
+		this.#nextCalled = true
+		this.#nextResult = this.#downstream(args)
+		return this.#nextResult
+	}
+}
+
 function createDispatch<Fn extends AnyFunction>(
 	fn: Fn,
 	middleware: MiddlewareFn<Fn>[],
@@ -82,31 +113,18 @@ function composeMiddlewareLayer<Fn extends AnyFunction>(
 	middleware: MiddlewareFn<Fn>,
 ): DispatchFn<Fn> {
 	return (args: Parameters<Fn>): ReturnType<Fn> => {
-		let nextCalled = false
-		let nextResult!: ReturnType<Fn>
+		const ctx = new ContextImpl<Fn>(args, downstream)
+		const result = middleware(ctx)
 
-		const context: MiddlewareContext<Fn> = {
-			args,
-			next: (...nextArgs: Parameters<Fn>) => {
-				if (nextCalled)
-					throw new Error('middiefy: next() can only be called once per middleware')
-
-				nextCalled = true
-				nextResult = downstream(nextArgs.length === 0 ? args : nextArgs)
-				return nextResult
-			},
-		}
-
-		const result = middleware(context)
 		if (result === undefined)
-			return nextCalled ? nextResult : context.next()
-		if (nextCalled && result === nextResult)
+			return ctx.nextCalled ? ctx.nextResult! : ctx.next()
+		if (ctx.nextCalled && result === ctx.nextResult)
 			return result as ReturnType<Fn>
-		if (isThenable(result)) {
+		if ((result instanceof Promise) || isThenable(result)) {
 			return result.then((resolved: any) => {
 				if (resolved !== undefined)
 					return resolved
-				return nextCalled ? nextResult : context.next()
+				return ctx.nextCalled ? ctx.nextResult : ctx.next()
 			}) as ReturnType<Fn>
 		}
 		return result as ReturnType<Fn>

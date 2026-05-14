@@ -34,7 +34,7 @@ const greet = middiefy((greeting: string, name: string) => {
 greet.add(
 	(context) => {
 		const [greeting, name] = context.args
-		return context.next(greeting.toUpperCase(), name.trim())
+		return context.nextWith(greeting.toUpperCase(), name.trim())
 	},
 	(context) => {
 		const [, name] = context.args
@@ -78,7 +78,7 @@ Returns a callable wrapper with the same parameters and return type as `fn`.
 
 Registers middleware in call order and returns the same wrapper.
 
-Middleware functions receive a `context` object with `next()` and readonly `args`.
+Middleware functions receive a `context` object with `next()`, `nextWith(...args)`, and readonly `args`.
 
 ### wrapper.remove(middleware)
 
@@ -102,17 +102,18 @@ Observes thrown or rejected errors, then rethrows them.
 
 ## Middleware rules
 
-- `next()` continues with the current `context.args`.
-- `next(...args)` continues with replaced downstream arguments.
+- `context.next()` continues with the current `context.args`.
+- `context.nextWith(...args)` continues with replaced downstream arguments.
 - Returning a value short-circuits the chain.
 - Returning `undefined` falls through to the next step.
-- `next()` can only be called once per middleware.
+- `next()` (or `nextWith()`) can only be called once per middleware.
+- `context` is bound to the current invocation; destructuring its methods (e.g. `const { next } = context`) is not supported. Call methods on `context` directly.
 - If an earlier middleware throws, later middleware is not called.
 
 ## Performance guidance
 
-- Prefer `next()` when a middleware does not change arguments.
-- Only call `next(...args)` with new values when downstream really needs different arguments.
+- Prefer `context.next()` when a middleware does not change arguments.
+- Only call `context.nextWith(...)` with new values when downstream really needs different arguments.
 - In hot paths, avoid creating a new args tuple just to pass the same values through.
 
 ## Notes

@@ -74,6 +74,6 @@ export function transformArgs<
 	transform: (args: Parameters<Fn>) => Parameters<Fn>,
 ): MiddlewareFn<Fn> {
 	return (context) => {
-		return context.next(...transform(context.args))
+		return context.nextWith(...transform(context.args))
 	}
 }
