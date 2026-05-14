@@ -337,6 +337,24 @@ describe('middiefy', () => {
 		expect(wrapped(['zhong666'])).toBe('zhong666,other')
 	})
 
+	it('keeps the pipeline unchanged when add receives only existing middleware', () => {
+		const base = vi.fn((names: string[]) => names.join(','))
+		const wrapped = middiefy(base)
+		const appendOther: MiddlewareFn<SyncFn> = (context) => {
+			const [names] = context.args
+			return context.next([...names, 'other'])
+		}
+
+		wrapped.add(appendOther)
+		expect(wrapped(['zhong666'])).toBe('zhong666,other')
+		base.mockClear()
+
+		wrapped.add(appendOther)
+		expect(wrapped(['zhong666'])).toBe('zhong666,other')
+		expect(base).toHaveBeenCalledOnce()
+		expect(base).toHaveBeenCalledWith(['zhong666', 'other'])
+	})
+
 	it('supports multi-argument functions', () => {
 		const wrapped = middiefy((greeting: string, names: string[]) => {
 			return `${greeting} ${names.join(',')}`
@@ -417,6 +435,20 @@ describe('middiefy', () => {
 		)
 
 		await expect(wrapped(2)).resolves.toBe(4)
+	})
+
+	it('reuses nextResult when async middleware resolves undefined after calling next', async () => {
+		const wrapped = middiefy(async (value: number) => value * 2)
+
+		wrapped.add(
+			(context) => {
+				const [value] = context.args
+				context.next(value + 1)
+				return Promise.resolve(undefined)
+			},
+		)
+
+		await expect(wrapped(2)).resolves.toBe(6)
 	})
 
 	it('supports callable promise-like fallthrough for async middleware', async () => {

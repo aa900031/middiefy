@@ -91,6 +91,20 @@ describe('onError', () => {
 		expect(observed).toHaveBeenCalledWith([1], error)
 		expect(base).not.toHaveBeenCalled()
 	})
+
+	it('onError does nothing on sync success', () => {
+		const base = vi.fn((value: number) => value * 2)
+		const wrapped = middiefy(base)
+		const observed = vi.fn<(args: [number], error: Error) => void>()
+
+		wrapped.add(
+			onError<(value: number) => number, Error>(observed),
+		)
+
+		expect(wrapped(2)).toBe(4)
+		expect(observed).not.toHaveBeenCalled()
+		expect(base).toHaveBeenCalledOnce()
+	})
 })
 
 describe('transformArgs', () => {
@@ -168,6 +182,32 @@ describe('onBefore', () => {
 })
 
 describe('onAfter', () => {
+	it('onAfter observes sync results and sync errors without changing flow', () => {
+		const events: string[] = []
+		const success = middiefy((value: number) => value * 2)
+		const failure = middiefy((value: number) => {
+			throw new Error(`boom:${value}`)
+		})
+
+		success.add(
+			onAfter<(value: number) => number>((args, error, result) => {
+				events.push(`success:${args[0]}:${String(error)}:${String(result)}`)
+			}),
+		)
+		failure.add(
+			onAfter<(value: number) => never>((args, error, result) => {
+				events.push(`failure:${args[0]}:${error instanceof Error ? error.message : String(error)}:${String(result)}`)
+			}),
+		)
+
+		expect(success(2)).toBe(4)
+		expect(() => failure(3)).toThrow('boom:3')
+		expect(events).toEqual([
+			'success:2:undefined:4',
+			'failure:3:boom:3:undefined',
+		])
+	})
+
 	it('onAfter observes resolved results and errors without changing flow', async () => {
 		const events: string[] = []
 		const success = middiefy(async (value: number) => value * 2)
