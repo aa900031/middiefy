@@ -1,6 +1,6 @@
-import type { MiddlewareFn } from '../'
+import type { MiddlewareFn } from './'
 import { bench, describe } from 'vitest'
-import { middiefy } from '../'
+import { middiefy } from './'
 
 type SyncFn = (names: string[]) => string
 type AsyncFn = (value: number) => Promise<number>
