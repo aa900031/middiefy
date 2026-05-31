@@ -9,11 +9,11 @@ importers:
   .:
     devDependencies:
       '@aa900031/eslint-config':
-        specifier: ^6.1.0
-        version: 6.1.0(@typescript-eslint/typescript-estree@8.59.0(typescript@5.9.3))(@typescript-eslint/utils@8.59.0(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)(vitest@3.2.4(@types/debug@4.1.13)(@types/node@22.19.19)(jiti@2.6.1)(yaml@2.8.3))
+        specifier: ^6.1.2
+        version: 6.1.2(@typescript-eslint/typescript-estree@8.59.0(typescript@5.9.3))(@typescript-eslint/utils@8.59.0(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)(vitest@3.2.4(@types/debug@4.1.13)(@types/node@22.19.19)(jiti@2.6.1)(yaml@2.8.3))
       '@aa900031/release-it-config':
-        specifier: ^0.1.1
-        version: 0.1.1(conventional-changelog@7.2.0(conventional-commits-filter@5.0.0))(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.4.0)(release-it@19.2.4(@types/node@22.19.19)(magicast@0.3.5))
+        specifier: ^0.1.2
+        version: 0.1.2(conventional-changelog@7.2.0(conventional-commits-filter@5.0.0))(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.4.0)(release-it@19.2.4(@types/node@22.19.19)(magicast@0.3.5))
       '@aa900031/tsdown-config':
         specifier: ^0.2.0
         version: 0.2.0(tsdown@0.22.0(typescript@5.9.3))
@@ -47,13 +47,13 @@ importers:
 
 packages:
 
-  '@aa900031/eslint-config@6.1.0':
-    resolution: {integrity: sha512-uYkJwQYenA2UWAK2tQHo7AMg93XqRbV+y4K+kVV4diRGBXiVcjHRu6BuCMV0/w3Gms3EcDFULffhXwxmLmiYZQ==}
+  '@aa900031/eslint-config@6.1.2':
+    resolution: {integrity: sha512-WOmStxS8E60FKKucXrqPxTSr1ygADpb7dPdumKEL3JwAMv/pci9GQrxTu1z7jqiNPnaafmnvNpWd3kVCilupww==}
     peerDependencies:
       eslint: ^9.10.0 || ^10.0.0
 
-  '@aa900031/release-it-config@0.1.1':
-    resolution: {integrity: sha512-3a9TosL5tqghVggqhNK4WxTgKiK/ufpLHigQpRQawkUuzh6rZ2Zk/8+GsXyKgGX+ny6CpXRdRH5ed/KYrc3uEQ==}
+  '@aa900031/release-it-config@0.1.2':
+    resolution: {integrity: sha512-WyIholoP/s/9f6XTHbBdmEshg8WEzauVe9isO+1Q5J23KL7oMNyeCt5Ck/E6bPspVEXGZqJUy5y1OcBc7IH12Q==}
 
   '@aa900031/tsdown-config@0.2.0':
     resolution: {integrity: sha512-G5qeDmtFD6UnetfuB88uLmIFzR+S9E4eEMRA3RgvoykbVW6L47D1GRWqJQLg/cxZmg/XhWFrHgX7Baqhcp4+og==}
@@ -1698,12 +1698,6 @@ packages:
     peerDependencies:
       eslint: '>=8'
 
-  eslint-plugin-file-progress@3.0.2:
-    resolution: {integrity: sha512-wX54LVbKP1MOe+yXI6CkfyseUkgiBgvHDgb3mWZ5j6xfQa81hcLzeiOew+rIZuxZQ+M3UHLC4pOGRYUP6OKsyA==}
-    engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
-    peerDependencies:
-      eslint: ^9.0.0
-
   eslint-plugin-import-lite@0.5.2:
     resolution: {integrity: sha512-XvfdWOC5dSLEI9krIPRlNmKSI2ViIE9pVylzfV9fCq0ZpDaNeUk6o0wZv0OzN83QdadgXp1NsY0qjLINxwYCsw==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
@@ -3311,15 +3305,16 @@ packages:
 
 snapshots:
 
-  '@aa900031/eslint-config@6.1.0(@typescript-eslint/typescript-estree@8.59.0(typescript@5.9.3))(@typescript-eslint/utils@8.59.0(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)(vitest@3.2.4(@types/debug@4.1.13)(@types/node@22.19.19)(jiti@2.6.1)(yaml@2.8.3))':
+  '@aa900031/eslint-config@6.1.2(@typescript-eslint/typescript-estree@8.59.0(typescript@5.9.3))(@typescript-eslint/utils@8.59.0(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)(vitest@3.2.4(@types/debug@4.1.13)(@types/node@22.19.19)(jiti@2.6.1)(yaml@2.8.3))':
     dependencies:
       '@antfu/eslint-config': 7.7.3(@typescript-eslint/typescript-estree@8.59.0(typescript@5.9.3))(@typescript-eslint/utils@8.59.0(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)(vitest@3.2.4(@types/debug@4.1.13)(@types/node@22.19.19)(jiti@2.6.1)(yaml@2.8.3))
       defu: 6.1.7
       eslint: 9.39.4(jiti@2.6.1)
       eslint-plugin-case-police: 2.2.1(eslint@9.39.4(jiti@2.6.1))(typescript@5.9.3)
-      eslint-plugin-file-progress: 3.0.2(eslint@9.39.4(jiti@2.6.1))
       is-in-ci: 2.0.0
       local-pkg: 1.1.2
+      nanospinner: 1.2.2
+      picocolors: 1.1.1
       resolve-pkg: 3.0.1
       semver: 7.8.0
     transitivePeerDependencies:
@@ -3352,7 +3347,7 @@ snapshots:
       - typescript
       - vitest
 
-  '@aa900031/release-it-config@0.1.1(conventional-changelog@7.2.0(conventional-commits-filter@5.0.0))(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.4.0)(release-it@19.2.4(@types/node@22.19.19)(magicast@0.3.5))':
+  '@aa900031/release-it-config@0.1.2(conventional-changelog@7.2.0(conventional-commits-filter@5.0.0))(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.4.0)(release-it@19.2.4(@types/node@22.19.19)(magicast@0.3.5))':
     dependencies:
       '@release-it/conventional-changelog': 10.0.6(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.4.0)(release-it@19.2.4(@types/node@22.19.19)(magicast@0.3.5))
       conventional-changelog-unjs: 1.0.1(conventional-changelog@7.2.0(conventional-commits-filter@5.0.0))
@@ -4894,12 +4889,6 @@ snapshots:
       '@eslint-community/regexpp': 4.12.2
       eslint: 9.39.4(jiti@2.6.1)
       eslint-compat-utils: 0.5.1(eslint@9.39.4(jiti@2.6.1))
-
-  eslint-plugin-file-progress@3.0.2(eslint@9.39.4(jiti@2.6.1)):
-    dependencies:
-      eslint: 9.39.4(jiti@2.6.1)
-      nanospinner: 1.2.2
-      picocolors: 1.1.1
 
   eslint-plugin-import-lite@0.5.2(eslint@9.39.4(jiti@2.6.1)):
     dependencies:
