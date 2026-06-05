@@ -15,11 +15,11 @@ importers:
         specifier: ^0.1.2
         version: 0.1.2(conventional-changelog@7.2.0(conventional-commits-filter@5.0.0))(conventional-commits-filter@5.0.0)(conventional-commits-parser@6.4.0)(release-it@19.2.4(@types/node@22.19.19)(magicast@0.3.5))
       '@aa900031/tsdown-config':
-        specifier: ^0.2.0
-        version: 0.2.0(tsdown@0.22.1(typescript@5.9.3))
+        specifier: ^0.2.1
+        version: 0.2.1(tsdown@0.22.1(typescript@5.9.3))
       '@codspeed/vitest-plugin':
-        specifier: ^5.4.0
-        version: 5.4.0(tinybench@2.9.0)(vite@7.3.2(@types/node@22.19.19)(jiti@2.6.1)(yaml@2.8.3))(vitest@3.2.4(@types/debug@4.1.13)(@types/node@22.19.19)(jiti@2.6.1)(yaml@2.8.3))
+        specifier: ^5.5.0
+        version: 5.5.0(tinybench@2.9.0)(vite@7.3.2(@types/node@22.19.19)(jiti@2.6.1)(yaml@2.8.3))(vitest@3.2.4(@types/debug@4.1.13)(@types/node@22.19.19)(jiti@2.6.1)(yaml@2.8.3))
       '@tsconfig/node22':
         specifier: ^22.0.5
         version: 22.0.5
@@ -55,10 +55,10 @@ packages:
   '@aa900031/release-it-config@0.1.2':
     resolution: {integrity: sha512-WyIholoP/s/9f6XTHbBdmEshg8WEzauVe9isO+1Q5J23KL7oMNyeCt5Ck/E6bPspVEXGZqJUy5y1OcBc7IH12Q==}
 
-  '@aa900031/tsdown-config@0.2.0':
-    resolution: {integrity: sha512-G5qeDmtFD6UnetfuB88uLmIFzR+S9E4eEMRA3RgvoykbVW6L47D1GRWqJQLg/cxZmg/XhWFrHgX7Baqhcp4+og==}
+  '@aa900031/tsdown-config@0.2.1':
+    resolution: {integrity: sha512-jnQZEg4dOAT5AHR9iKo95S9UR8BbIkRcShbEHkneiO/NZ6toodAoC3iA/2xAAwXoROKGSk+9B0Gt2/aaKqa7Uw==}
     peerDependencies:
-      tsdown: ^0.0.0
+      tsdown: '>=0.0.0 <1.0.0'
 
   '@antfu/eslint-config@7.7.3':
     resolution: {integrity: sha512-BtroDxTvmWtvr3yJkdWVCvwsKlnEdkreoeOyrdNezc/W5qaiQNf2xjcsQ3N5Yy0x27h+0WFfW8rG8YlVioG6dw==}
@@ -221,11 +221,11 @@ packages:
   '@clack/prompts@1.2.0':
     resolution: {integrity: sha512-4jmztR9fMqPMjz6H/UZXj0zEmE43ha1euENwkckKKel4XpSfokExPo5AiVStdHSAlHekz4d0CA/r45Ok1E4D3w==}
 
-  '@codspeed/core@5.4.0':
-    resolution: {integrity: sha512-SwGjXDixN/zX1awBR95LzS0KxIs931qwf7Hbk7BRWv1jAdlMYf9o9GlSnWER4zGBHz941BvzFQJ1O2RIofW3cg==}
+  '@codspeed/core@5.5.0':
+    resolution: {integrity: sha512-5FbjNlxSVOfemB85orEecikZiTz0C8aZYUfCkt5HY6QLLd1mqkrHAfekEJw0gkHcgCjNgD6DVp2TXm0V/xtt4w==}
 
-  '@codspeed/vitest-plugin@5.4.0':
-    resolution: {integrity: sha512-Xa9HaZHUjYXn1T39bTipV5hmguk1vIuDZs3Gc5OYA8X4ohftYbKfyoFtBqVFfB/ii/p1ihuwt+tltraKMcRDsA==}
+  '@codspeed/vitest-plugin@5.5.0':
+    resolution: {integrity: sha512-u7NTLXujxo0bQVCYDXk2mDJ+lA8h5vPY96FvUpPYLUbzVRsM6HO62gXXn4ABJOGYwx1bIwXtgSpUlK/V63iIcg==}
     peerDependencies:
       tinybench: '>=2.9.0'
       vite: ^4.2.0 || ^5.0.0 || ^6.0.0 || ^7.0.0
@@ -2915,6 +2915,10 @@ packages:
   spdx-license-ids@3.0.23:
     resolution: {integrity: sha512-CWLcCCH7VLu13TgOH+r8p1O/Znwhqv/dbb6lqWy67G+pT1kHmeD/+V36AVb/vq8QMIQwVShJ6Ssl5FPh0fuSdw==}
 
+  stack-trace@1.0.0-pre2:
+    resolution: {integrity: sha512-2ztBJRek8IVofG9DBJqdy2N5kulaacX30Nz7xmkYF6ale9WBVmIy6mFBchvGX7Vx/MyjBhx+Rcxqrj+dbOnQ6A==}
+    engines: {node: '>=16'}
+
   stackback@0.0.2:
     resolution: {integrity: sha512-1XMJE5fQo1jGH6Y/7ebnwPOBEkIEnT4QF32d5R1+VXdXveM0IBMJt8zfaxX1P3QhVwrYe+576+jkANtSS2mBbw==}
 
@@ -3353,7 +3357,7 @@ snapshots:
       - conventional-commits-parser
       - release-it
 
-  '@aa900031/tsdown-config@0.2.0(tsdown@0.22.1(typescript@5.9.3))':
+  '@aa900031/tsdown-config@0.2.1(tsdown@0.22.1(typescript@5.9.3))':
     dependencies:
       tsdown: 0.22.1(typescript@5.9.3)
 
@@ -3546,18 +3550,19 @@ snapshots:
       fast-wrap-ansi: 0.1.6
       sisteransi: 1.0.5
 
-  '@codspeed/core@5.4.0':
+  '@codspeed/core@5.5.0':
     dependencies:
       axios: 1.15.2
       find-up: 6.3.0
       form-data: 4.0.5
       node-gyp-build: 4.8.4
+      stack-trace: 1.0.0-pre2
     transitivePeerDependencies:
       - debug
 
-  '@codspeed/vitest-plugin@5.4.0(tinybench@2.9.0)(vite@7.3.2(@types/node@22.19.19)(jiti@2.6.1)(yaml@2.8.3))(vitest@3.2.4(@types/debug@4.1.13)(@types/node@22.19.19)(jiti@2.6.1)(yaml@2.8.3))':
+  '@codspeed/vitest-plugin@5.5.0(tinybench@2.9.0)(vite@7.3.2(@types/node@22.19.19)(jiti@2.6.1)(yaml@2.8.3))(vitest@3.2.4(@types/debug@4.1.13)(@types/node@22.19.19)(jiti@2.6.1)(yaml@2.8.3))':
     dependencies:
-      '@codspeed/core': 5.4.0
+      '@codspeed/core': 5.5.0
       tinybench: 2.9.0
       vite: 7.3.2(@types/node@22.19.19)(jiti@2.6.1)(yaml@2.8.3)
       vitest: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.19)(jiti@2.6.1)(yaml@2.8.3)
@@ -6387,6 +6392,8 @@ snapshots:
       spdx-license-ids: 3.0.23
 
   spdx-license-ids@3.0.23: {}
+
+  stack-trace@1.0.0-pre2: {}
 
   stackback@0.0.2: {}
 
