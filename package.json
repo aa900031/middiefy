@@ -43,8 +43,8 @@
 	"devDependencies": {
 		"@aa900031/eslint-config": "^6.1.2",
 		"@aa900031/release-it-config": "^0.1.2",
-		"@aa900031/tsdown-config": "^0.2.0",
-		"@codspeed/vitest-plugin": "^5.4.0",
+		"@aa900031/tsdown-config": "^0.2.1",
+		"@codspeed/vitest-plugin": "^5.5.0",
 		"@tsconfig/node22": "^22.0.5",
 		"@types/node": "^22.19.19",
 		"@vitest/coverage-istanbul": "^3.2.4",
