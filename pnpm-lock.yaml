@@ -18,7 +18,7 @@ importers:
         specifier: ^0.2.2
         version: 0.2.2(tsdown@0.22.3(typescript@5.9.3))
       '@codspeed/vitest-plugin':
-        specifier: ^5.7.0
+        specifier: ^5.7.1
         version: 5.7.1(tinybench@2.9.0)(vite@7.3.2(@types/node@22.20.0)(jiti@2.6.1)(yaml@2.8.3))(vitest@3.2.6(@types/debug@4.1.13)(@types/node@22.20.0)(jiti@2.6.1)(yaml@2.8.3))
       '@tsconfig/node22':
         specifier: ^22.0.5
