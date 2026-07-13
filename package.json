@@ -47,12 +47,12 @@
 		"@codspeed/vitest-plugin": "^5.7.1",
 		"@tsconfig/node22": "^22.0.5",
 		"@types/node": "^22.20.0",
-		"@vitest/coverage-istanbul": "^3.2.6",
+		"@vitest/coverage-istanbul": "^3.2.7",
 		"eslint": "^9.39.4",
 		"release-it": "^19.2.4",
 		"tsdown": "^0.22.3",
 		"typescript": "~5.9.3",
-		"vitest": "^3.2.6"
+		"vitest": "^3.2.7"
 	},
 	"publishConfig": {
 		"exports": {
