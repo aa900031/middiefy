@@ -45,7 +45,7 @@
 		"@aa900031/release-it-config": "^0.1.2",
 		"@aa900031/tsdown-config": "^0.2.2",
 		"@codspeed/vitest-plugin": "^5.7.1",
-		"@tsconfig/node22": "^22.0.5",
+		"@tsconfig/node24": "^24.0.0",
 		"@types/node": "^22.20.1",
 		"@vitest/coverage-istanbul": "^3.2.7",
 		"eslint": "^9.39.5",
