@@ -36,7 +36,7 @@ importers:
         specifier: ^19.2.4
         version: 19.2.4(@types/node@22.20.1)(magicast@0.3.5)
       tsdown:
-        specifier: ^0.22.5
+        specifier: ^0.22.9
         version: 0.22.9(typescript@5.9.3)
       typescript:
         specifier: ~5.9.3
