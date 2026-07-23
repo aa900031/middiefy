@@ -2,7 +2,7 @@
 	"name": "middiefy",
 	"type": "module",
 	"version": "0.3.0",
-	"packageManager": "pnpm@11.1.2",
+	"packageManager": "pnpm@11.13.1",
 	"author": "zhong666 <hi@zhong666.me>",
 	"license": "MIT",
 	"repository": {
