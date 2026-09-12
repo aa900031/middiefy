@@ -20,9 +20,9 @@ importers:
       '@codspeed/vitest-plugin':
         specifier: ^5.7.1
         version: 5.7.1(tinybench@2.9.0)(vite@7.3.2(@types/node@22.20.1)(jiti@2.6.1)(yaml@2.8.3))(vitest@3.2.7(@types/debug@4.1.13)(@types/node@22.20.1)(jiti@2.6.1)(yaml@2.8.3))
-      '@tsconfig/node22':
-        specifier: ^22.0.6
-        version: 22.0.6
+      '@tsconfig/node24':
+        specifier: ^24.0.0
+        version: 24.0.5
       '@types/node':
         specifier: ^22.20.1
         version: 22.20.1
@@ -993,8 +993,8 @@ packages:
   '@tootallnate/quickjs-emscripten@0.23.0':
     resolution: {integrity: sha512-C5Mc6rdnsaJDjO3UpGW/CQTHtCKaYlScZTly4JIu97Jxo/odCiH0ITnDXSJPTOrEKk/ycSZ0AOgTmkDtkOsvIA==}
 
-  '@tsconfig/node22@22.0.6':
-    resolution: {integrity: sha512-/5thavHAnWDZwH2H6eEn/T8pBEBhtuKaWGMslsj82kJfvzQgOgEMK7X4goBbIUjgVtAzPTtM9Ml64LA0uxO6Iw==}
+  '@tsconfig/node24@24.0.5':
+    resolution: {integrity: sha512-DWC54fGPuhZgg3Ighg4Y/A/bA3ZdB5hnzAuv/MkQ/X85sVsBsMQxu8t7khutdYeiNksBbFdDyeqv1HSW2Zl8aA==}
 
   '@types/chai@5.2.3':
     resolution: {integrity: sha512-Mw558oeA9fFbv65/y4mHtXDs9bPnFMZAL/jxdPFUpOHHIXX91mcgEHbS5Lahr+pwZFR8A7GQleRWeI6cGFC2UA==}
@@ -4256,7 +4256,7 @@ snapshots:
 
   '@tootallnate/quickjs-emscripten@0.23.0': {}
 
-  '@tsconfig/node22@22.0.6': {}
+  '@tsconfig/node24@24.0.5': {}
 
   '@types/chai@5.2.3':
     dependencies:
