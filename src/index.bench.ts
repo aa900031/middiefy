@@ -1,5 +1,6 @@
+import type { BenchRegistration } from 'vitest'
 import type { MiddlewareFn } from './'
-import { bench, describe } from 'vitest'
+import { it } from 'vitest'
 import { middiefy } from './'
 
 type SyncFn = (names: string[]) => string
@@ -19,9 +20,20 @@ const undefinedThenable: PromiseLike<number | undefined> = {
 	},
 }
 
+type Benchmark = (name: string, fn: () => unknown) => void
+
+function benchmark(name: string, define: (bench: Benchmark) => void) {
+	it(name, async ({ bench }) => {
+		const benchmarks: BenchRegistration<string>[] = []
+		define((name, fn) => benchmarks.push(bench(name, fn)))
+		// eslint-disable-next-line test/consistent-test-it
+		await bench.compare(...benchmarks)
+	})
+}
+
 // ── Sync passthrough overhead ───────────────────────────────────────────────
 
-describe('sync passthrough: no middleware', () => {
+benchmark('sync passthrough: no middleware', (bench) => {
 	const input = ['zhong666']
 	const wrapped = middiefy(syncFn)
 
@@ -33,7 +45,7 @@ describe('sync passthrough: no middleware', () => {
 	})
 })
 
-describe('sync passthrough: one middleware', () => {
+benchmark('sync passthrough: one middleware', (bench) => {
 	const input = ['zhong666']
 	const wrapped = middiefy(syncFn).add(ctx => ctx.next())
 
@@ -45,7 +57,7 @@ describe('sync passthrough: one middleware', () => {
 	})
 })
 
-describe('sync passthrough: three middlewares', () => {
+benchmark('sync passthrough: three middlewares', (bench) => {
 	const input = ['zhong666']
 	const wrapped = middiefy(syncFn).add(
 		ctx => ctx.next(),
@@ -63,7 +75,7 @@ describe('sync passthrough: three middlewares', () => {
 
 // ── Sync transforming pipeline ──────────────────────────────────────────────
 
-describe('sync transform: one middleware', () => {
+benchmark('sync transform: one middleware', (bench) => {
 	const input = ['zhong666']
 	const wrapped = middiefy(syncFn).add((context) => {
 		const [names] = context.args
@@ -78,7 +90,7 @@ describe('sync transform: one middleware', () => {
 	})
 })
 
-describe('sync transform: three middlewares', () => {
+benchmark('sync transform: three middlewares', (bench) => {
 	const input = ['zhong666']
 	const wrapped = middiefy(syncFn).add(
 		(context) => {
@@ -110,7 +122,7 @@ describe('sync transform: three middlewares', () => {
 
 // ── Async passthrough overhead ──────────────────────────────────────────────
 
-describe('async passthrough: no middleware', () => {
+benchmark('async passthrough: no middleware', (bench) => {
 	const wrapped = middiefy(asyncFn)
 
 	bench('baseline', async () => {
@@ -121,7 +133,7 @@ describe('async passthrough: no middleware', () => {
 	})
 })
 
-describe('async passthrough: one sync middleware', () => {
+benchmark('async passthrough: one sync middleware', (bench) => {
 	const wrapped = middiefy(asyncFn).add(ctx => ctx.next())
 
 	bench('baseline', async () => {
@@ -132,7 +144,7 @@ describe('async passthrough: one sync middleware', () => {
 	})
 })
 
-describe('async passthrough: three sync middlewares', () => {
+benchmark('async passthrough: three sync middlewares', (bench) => {
 	const wrapped = middiefy(asyncFn).add(
 		ctx => ctx.next(),
 		ctx => ctx.next(),
@@ -147,7 +159,7 @@ describe('async passthrough: three sync middlewares', () => {
 	})
 })
 
-describe('async passthrough: one async middleware', () => {
+benchmark('async passthrough: one async middleware', (bench) => {
 	const wrapped = middiefy(asyncFn).add(async ctx => await ctx.next())
 
 	bench('baseline', async () => {
@@ -160,7 +172,7 @@ describe('async passthrough: one async middleware', () => {
 
 // ── Async fallthrough pipeline ──────────────────────────────────────────────
 
-describe('async fallthrough: sync short-circuit', () => {
+benchmark('async fallthrough: sync short-circuit', (bench) => {
 	// first calls nextWith(value+1), second returns undefined → fallthrough → asyncFn(value+1)
 	const wrapped = middiefy(asyncFn).add(
 		async (context) => {
@@ -178,7 +190,7 @@ describe('async fallthrough: sync short-circuit', () => {
 	})
 })
 
-describe('async fallthrough: async fallthrough', () => {
+benchmark('async fallthrough: async fallthrough', (bench) => {
 	const wrapped = middiefy(asyncFn).add(
 		async (context) => {
 			const [value] = context.args
@@ -198,7 +210,7 @@ describe('async fallthrough: async fallthrough', () => {
 	})
 })
 
-describe('async fallthrough: thenable fallthrough', () => {
+benchmark('async fallthrough: thenable fallthrough', (bench) => {
 	const wrapped = middiefy(asyncFn).add(
 		async (context) => {
 			const [value] = context.args
@@ -218,7 +230,7 @@ describe('async fallthrough: thenable fallthrough', () => {
 	})
 })
 
-describe('async fallthrough: sync middleware + thenable fallthrough', () => {
+benchmark('async fallthrough: sync middleware + thenable fallthrough', (bench) => {
 	const wrapped = middiefy(asyncFn).add(
 		(context) => {
 			const [value] = context.args
@@ -240,7 +252,7 @@ describe('async fallthrough: sync middleware + thenable fallthrough', () => {
 
 // ── Mutation-heavy pipeline ─────────────────────────────────────────────────
 
-describe('sync short-circuit return', () => {
+benchmark('sync short-circuit return', (bench) => {
 	const input = ['zhong666']
 	const wrapped = middiefy(syncFn).add(() => 'blocked')
 
@@ -252,7 +264,7 @@ describe('sync short-circuit return', () => {
 	})
 })
 
-describe('sync repeated next guard', () => {
+benchmark('sync repeated next guard', (bench) => {
 	const input = ['zhong666']
 	const wrapped = middiefy(syncFn).add(
 		(context) => {
@@ -281,7 +293,7 @@ describe('sync repeated next guard', () => {
 	})
 })
 
-describe('middleware add/remove churn', () => {
+benchmark('middleware add/remove churn', (bench) => {
 	const appendOther: MiddlewareFn<SyncFn> = (context) => {
 		const [names] = context.args
 		return context.nextWith([...names, 'other'])
@@ -308,7 +320,7 @@ describe('middleware add/remove churn', () => {
 
 // ── Lazy short-circuit rebuild cost ────────────────────────────────────────
 
-describe('lazy short-circuit rebuild', () => {
+benchmark('lazy short-circuit rebuild', (bench) => {
 	const input = ['zhong666']
 	const shortCircuit: MiddlewareFn<SyncFn> = () => 'blocked'
 	const passthroughMiddlewares: MiddlewareFn<SyncFn>[] = [
