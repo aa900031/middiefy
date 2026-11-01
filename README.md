@@ -109,7 +109,10 @@ const greet = middiefy((greeting: string, name: string) => {
 })
 
 greet.add(
-	transformArgs(([greeting, name]) => [greeting.toUpperCase(), name.trim()]),
+	transformArgs(([greeting, name]) => [
+		greeting.toUpperCase(),
+		name.trim()
+	]),
 	onBefore(([greeting, name]) => {
 		console.log('about to greet', { greeting, name })
 	}),

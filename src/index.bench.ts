@@ -329,7 +329,9 @@ describe('lazy short-circuit rebuild', () => {
 					next: () => next(...args),
 					nextWith: (...newArgs) => next(...newArgs),
 				})
-				return (r === undefined ? next(...args) : r) as string
+				return (r === undefined
+					? next(...args)
+					: r) as string
 			},
 			syncFn,
 		)

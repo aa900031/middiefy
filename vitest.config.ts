@@ -6,7 +6,9 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
 	test: {
 		pool: isCI ? 'forks' : undefined,
-		execArgv: isCI ? getV8Flags() : undefined,
+		execArgv: isCI
+			? getV8Flags()
+			: undefined,
 		coverage: {
 			provider: 'istanbul',
 		},

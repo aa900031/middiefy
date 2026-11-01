@@ -54,12 +54,16 @@ describe('onError', () => {
 
 		syncFailure.add(
 			onError<(value: number) => never>((args, error) => {
-				events.push(`sync:${args[0]}:${error instanceof Error ? error.message : String(error)}`)
+				events.push(`sync:${args[0]}:${error instanceof Error
+					? error.message
+					: String(error)}`)
 			}),
 		)
 		asyncFailure.add(
 			onError<(value: number) => Promise<never>>((args, error) => {
-				events.push(`async:${args[0]}:${error instanceof Error ? error.message : String(error)}`)
+				events.push(`async:${args[0]}:${error instanceof Error
+					? error.message
+					: String(error)}`)
 			}),
 		)
 
@@ -196,7 +200,9 @@ describe('onAfter', () => {
 		)
 		failure.add(
 			onAfter<(value: number) => never>((args, error, result) => {
-				events.push(`failure:${args[0]}:${error instanceof Error ? error.message : String(error)}:${String(result)}`)
+				events.push(`failure:${args[0]}:${error instanceof Error
+					? error.message
+					: String(error)}:${String(result)}`)
 			}),
 		)
 
@@ -222,7 +228,9 @@ describe('onAfter', () => {
 		)
 		failure.add(
 			onAfter<(value: number) => Promise<never>>((args, error, result) => {
-				events.push(`failure:${args[0]}:${error instanceof Error ? error.message : String(error)}:${String(result)}`)
+				events.push(`failure:${args[0]}:${error instanceof Error
+					? error.message
+					: String(error)}:${String(result)}`)
 			}),
 		)
 

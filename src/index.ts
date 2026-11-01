@@ -105,15 +105,20 @@ function composeMiddlewareLayer<Fn extends AnyFunction>(
 		const ctx = new MiddlewareContextImpl<Fn>(args, downstream)
 		const result = middleware(ctx)
 
-		if (result === undefined)
-			return ctx.nextCalled ? ctx.nextResult! : ctx.next()
+		if (result === undefined) {
+			return ctx.nextCalled
+				? ctx.nextResult!
+				: ctx.next()
+		}
 		if (ctx.nextCalled && result === ctx.nextResult)
 			return result as ReturnType<Fn>
 		if ((result instanceof Promise) || isThenable(result)) {
 			return result.then((resolved: any) => {
 				if (resolved !== undefined)
 					return resolved
-				return ctx.nextCalled ? ctx.nextResult : ctx.next()
+				return ctx.nextCalled
+					? ctx.nextResult
+					: ctx.next()
 			}) as ReturnType<Fn>
 		}
 		return result as ReturnType<Fn>
